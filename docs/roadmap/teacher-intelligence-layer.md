@@ -5917,12 +5917,14 @@ other unknown token.
 
 #### 16.7.8 · One item this opens
 
-- **O-4 · Stage 1 and multi-branch functions.** A function that breaks stores
-  the same `expr` on each branch, which is the honest statement — every branch
-  *is* that function on part of its domain. When Stage 1 renders from `expr`
-  directly it must treat consecutive curves sharing an identical `expr` as one
-  function, or it will draw it several times. A Stage 1 design item, recorded
-  now so it is not discovered then.
+- **O-4 · CLOSED by §16.7.11** (2026-09-05) — Stage 1 groups `curves[]` into
+  functions by **adjacency, never globally**, which is the rule Stage 0's
+  `hydratePlot` already ships. A function that breaks stores the same `expr` on
+  each branch, which is the honest statement — every branch *is* that function
+  on part of its domain. When Stage 1 renders from `expr` directly it must
+  treat consecutive curves sharing an identical `expr` as one function, or it
+  will draw it several times. Recorded here before Stage 1 so it was not
+  discovered during it.
 
 ### 16.7.9 · The pinned branch fixtures (clarification 1)
 
@@ -5987,6 +5989,113 @@ The minimum is also the database's: `exam_stimulus_spec_ok` requires
 — it cannot be stored.
 
 The Y-delta split heuristic of §16.7.4 is **unchanged** by this clarification.
+
+### 16.7.11 · O-4 CLOSED — Stage 1 expression-rendering function identity (2026-09-05)
+
+Read-only audit, then a decision. No code was written, no schema proposed, and
+Stage 0 was not touched. The audit's finding is the whole of the answer:
+**Stage 0 already implements this rule**, so Stage 1 does not get to choose one.
+
+#### The rule, LOCKED
+
+> **O-4 (CLOSED).** Stage 1 groups a plot's `curves[]` into functions by
+> **adjacency, never globally**.
+>
+> 1. Walk `curves[]` in **stored order**, tracking the previous curve's `expr`.
+> 2. Consecutive curves with the **same `expr`** are **branches of one
+>    function** — rendered once, as one function, across all its branches.
+> 3. A **different `expr`** ends the current run.
+> 4. A **points curve** (no `expr`) ends the current run **and resets the
+>    tracker**.
+> 5. **Non-consecutive identical expressions are separate functions.**
+>    `1/x, x^2, 1/x` is three functions, not two.
+> 6. A **single `expr` curve is one function** — the general rule at N = 1, not
+>    a special case.
+> 7. **Adjacent duplicate expressions are intentionally normalised as one
+>    function**, because the current model has no grouping key and the two are
+>    visually identical. The collapse is normalisation, not loss.
+
+**The storage law of §16.7.5 is preserved unchanged.** A function curve stores
+**both** `expr` and `points`. Stage 1 renders from `expr`; `points` stay the
+answer for any renderer that does not evaluate one — which is the live one
+today. O-4 adds **no function id, no branch id, no grouping key, no schema
+field and no new visual architecture**.
+
+**The invariant this establishes:** *Stage 1 renderer function identity must
+agree with `hydratePlot` function identity.* Both sides answer "how many
+functions is this?", and they must answer identically or a teacher edits two
+rows and sees three curves.
+
+#### Why adjacency, and why this exact rule
+
+`stimulus-editor.js:474-491` has shipped the rule since Stage 0, and says so
+in its own comment: *"Consecutive curves sharing one expr are BRANCHES OF ONE
+FUNCTION and must fold back into a single row, or the round trip would multiply
+the function by its own branch count."* The audit **executed the shipped
+`hydrate('plot', …)`** rather than reading it — every row below is a measured
+result, re-measured 2026-09-05:
+
+| stored `curves[]` | `inputs.functions` | functions | pointGroups |
+|---|---|---|---|
+| one `x^2` | `["x^2"]` | **1** | 0 |
+| `1/x`, `1/x` | `["1/x"]` | **1** | 0 |
+| `tan(x)` ×5 | `["tan(x)"]` | **1** | 0 |
+| `1/x`, `x^2`, `1/x` | `["1/x","x^2","1/x"]` | **3** | 0 |
+| `1/x`, points, `1/x` | `["1/x","1/x"]` | **2** | 1 |
+| `x^2`, `2*x` | `["x^2","2*x"]` | **2** | 0 |
+| points only | `[]` | **0** | 1 |
+
+Three reasons this rule and no other:
+
+- **Adjacency is the only rule the stored model can express.** `figures[]`
+  carries `mode` (plus `labels` on a points curve) and nothing else — no
+  function id, no branch index. Inventing a grouping key means a schema field,
+  which §16.2's *extend, do not replace* forbids and which the roadmap does not
+  authorise for Stage 1.
+- **Global grouping would change what a teacher already sees.** It would merge
+  `1/x, x^2, 1/x` into two functions and reorder the drawing, for a spec that
+  renders correctly today.
+- **Divergence would split the editor from the renderer.** If Stage 1 grouped
+  differently, `hydratePlot` would have to change with it — a Stage 0 change
+  carrying its own round-trip risk, not something to slip into Stage 1.
+
+One consequence stated plainly rather than left implicit: **the model does not
+distinguish two genuinely separate functions that share an `expr` when they are
+adjacent.** Two such curves sample identically and draw exactly on top of each
+other, so the collapse loses nothing visible — but it is a real limit of the
+model, not an oversight, and rule 7 records it as a decision.
+
+#### The seven test obligations
+
+Stage 1 reuses the **pinned fixtures of §16.7.9** — F6 (`1/x` → 2 branches) and
+F7 (`tan(x)` → 5) — and introduces **no new sampling constant**.
+
+1. **F6 renders one function from two branches; F7 renders one from five.**
+2. **Branch geometry stays separate.** N branches still draw **N polylines**,
+   one per branch. Grouping is about *function identity*, never merging
+   geometry — this is the assertion that stops a naive fix from joining two
+   branches across an asymptote. `tests/stimulus-editor.test.mjs:419` already
+   pins the Stage 0 half of it.
+3. **Non-consecutive identical expressions:** `1/x, x^2, 1/x` → **three**
+   functions, in stored order.
+4. **A points curve resets adjacency:** `1/x`, points curve, `1/x` → **two**
+   functions.
+5. **Consecutive identical expressions collapse:** two adjacent identical
+   `expr` → **one** function.
+6. **A single `expr` curve → one function.**
+7. **The agreement test, and it is the important one.** For every fixture, the
+   renderer's function count **equals**
+   `hydrate('plot', spec).inputs.functions.length`. Both sides are computed
+   from the shipped code, so a future change to either that breaks the
+   correspondence goes red rather than going unnoticed.
+
+**Mutants that must be killed:** global grouping instead of adjacency (killed
+by 3); a points curve that does not reset the run (killed by 4); branches
+merged into a single polyline (killed by 2); the adjacency comparison made
+non-strict (killed by 5 or 7).
+
+O-4 is closed. **Nothing else about Stage 1 is defined by it** — not the
+renderer, not the evaluator, not the Stage 1 goal or exit criteria.
 
 ### 16.8 · Line-by-line contract review (2026-09-04)
 
@@ -6229,3 +6338,929 @@ Two findings were raised and then fixed on approval:
   one."* rather than faking one. Stage 3.
 - Stages 1–4 untouched: no expression rendering, no raster images, no
   accessibility or `display` work, no AI, no image→editable.
+
+### 16.10 · Stage 1 — DEFINITION (2026-09-05)
+
+Stage 1 has been referred to five times in this document and defined nowhere.
+The Stage 1 entry audit found exactly that and blocked on it, so this section
+is the definition — **and nothing more**. No renderer, no evaluator, no code,
+no schema, no migration.
+
+**Provenance, marked throughout.** Every clause below carries one of five
+labels, so a later reader can tell a standing requirement from a decision taken
+today from a gap still open:
+
+- **[roadmap]** — already stated elsewhere in this document, with the section
+  cited. This section restates it, it does not create it.
+- **[formalized]** — written down here for the first time, but derived entirely
+  from a **[roadmap]** statement. It adds no requirement the roadmap does not
+  already imply.
+- **[stage-1 scope]** — a constraint the roadmap imposes on **Stage 0** and
+  never on Stage 1, which Stage 1 adopts by explicit approval. It is a real
+  requirement, and it is **not** something this document already said.
+- **[design decision]** — a behavioural choice among candidate rules that the
+  roadmap does not determine. It **adds a requirement**, and the alternatives
+  it rejected are recorded beside it, so a later reader can see it was a
+  choice and not a reading.
+- **UNSPECIFIED** — a genuine gap. §16.10.8 lists them. **None is filled by
+  guessing**, and Stage 1 is not complete while one of them is being answered
+  implicitly by code rather than explicitly by a decision.
+
+#### 16.10.1 · Goal
+
+> **Stage 1 renders a supported `expr` curve directly from the existing
+> structured stimulus model** — the formula becomes a drawn line at render
+> time, rather than only at authoring time.
+
+**[roadmap]** §16.3: *"The formula is the record of intent, which Stage 1 will
+render directly; the points are what today's renderer draws."* §16.7.5 says the
+same of the storage law. §16.6 names expression rendering as Stage 1 and
+excludes it from Stage 0.
+
+The problem it solves, measured on the live renderer: `stimulus-view.js` has
+**one** `expr` reference and it is a comment saying it does not evaluate one
+(lines 271-273). A curve with no `points` array is counted as `unplottable` and
+reported under the figure as *"…is defined by a formula and is not drawn
+here."* That note is honest degradation, not a defect — and Stage 1 is the
+increment that makes it unnecessary **for a supported expression**. What
+becomes of the note itself is **U-4**, which this section does not decide.
+
+#### 16.10.2 · Scope
+
+1. **The locked expression grammar of §16.7, and nothing beyond it.**
+   **[roadmap]** §16.2 decision 4 and §16.7 (O-1 CLOSED). The whitelisted
+   function list, the precedence table, the normalisation rules and the
+   rejection sentences are fixed. Stage 1 **consumes** that grammar; it does
+   not extend it.
+2. **The `expr` + `points` storage law is unchanged.** **[roadmap]** §16.7.5,
+   restated by O-4 in §16.7.11. A function curve continues to store **both**.
+   Stage 1 changes what is *drawn*, never what is *stored*.
+3. **The structured stimulus architecture is unchanged.** **[roadmap]** §16.2:
+   *"extend, do not replace"* — the pipeline stays
+   `kind + validated spec JSONB → shared renderer → SVG output`, and there is
+   **no parallel visual system**.
+4. **The O-4 adjacency rule is mandatory, not advisory.** **[roadmap]**
+   §16.7.11. Stage 1 groups `curves[]` into functions by adjacency; its
+   function identity must agree with `hydratePlot`'s.
+5. **Raw SVG stays.** **[roadmap]** §16.2 decision 5. Stage 1 neither removes
+   it nor touches it.
+
+#### 16.10.3 · Deliverables
+
+1. **An expression evaluation capability available at render time.**
+   **[formalized]** from §16.3 and §16.7.5 — rendering `expr` directly requires
+   evaluating it somewhere the renderer can reach. **Where that code lives is
+   UNSPECIFIED (U-2).**
+2. **Integration with the existing renderer**, through the existing entry
+   point. **[roadmap]** §16.4 names `window.StimulusView.render()` as the only
+   renderer entry point Stage 0 may call; §16.2's *no parallel visual system*
+   extends the constraint past Stage 0. **[formalized]:** Stage 1 adds a
+   capability *behind* that entry point and does not introduce a second one.
+3. **Tests for the locked grammar and for O-4 behaviour.** **[roadmap]**
+   §16.7.7 lists what the grammar adds to the test plan; §16.7.11 lists the
+   seven O-4 obligations and the four mutants. Stage 1 ships both sets against
+   whatever code it adds.
+
+#### 16.10.4 · Success criteria
+
+1. **Supported expressions render correctly** — the eight pinned fixtures of
+   §16.7.9 (F1–F8) draw, and their branch counts, **taken through the Stage 0
+   sampler's constants**, are exactly the pinned numbers. **[roadmap]**
+   §16.7.9. Whether the renderer itself draws at that density is **U-5**, which
+   this criterion does not decide.
+2. **Multi-branch expressions follow O-4 exactly** — the seven obligations of
+   §16.7.11 pass and its four mutants are killed. **[roadmap]** §16.7.11.
+3. **Each branch remains a separate polyline.** N branches draw N polylines;
+   grouping is function *identity* and never merged geometry. **[roadmap]**
+   §16.7.11 obligation 2, already half-pinned at
+   `tests/stimulus-editor.test.mjs:419`.
+4. **Renderer function identity agrees with `hydratePlot`** — for every
+   fixture, the renderer's function count equals
+   `hydrate('plot', spec).inputs.functions.length`. **[roadmap]** §16.7.11
+   obligation 7.
+5. **No arbitrary JavaScript evaluation.** `eval`, `Function(`, `new Function`,
+   `setTimeout`, `setInterval`, `__proto__` and `globalThis` appear nowhere in
+   the code Stage 1 adds; each pattern is shown to fire on a string that does
+   contain it; and attack inputs are refused as ordinary unknown tokens.
+   **[roadmap]** §16.2 decision 4 and §16.7; the precedent is the Stage 0
+   grammar-closure test recorded in §16.9.
+6. **Existing points-based behaviour is intact.** Every fixture in
+   `tests/fixtures/stimuli.json` renders as it does today. **[formalized]**
+   from §16.2's *extend, do not replace*.
+
+   *Measured 2026-09-05, and it makes this criterion cheap to meet honestly:*
+   the fixture corpus is **12 stimuli, 5 of them plots, 6 curves — and
+   `expr` appears on zero of them.** Every live curve is points-only. **Stage
+   1 therefore cannot regress the stored corpus, because the stored corpus
+   contains no expression to re-draw.** The population that changes is content
+   Stage 0 authors (which always carries both keys — U-1) and hand-written
+   `expr`-only specs (which draw nothing at all today).
+
+#### 16.10.5 · Explicit non-goals
+
+All **[roadmap]**, from §16.2 and §16.6:
+
+- **No new visual architecture** — no parallel renderer, no second entry point.
+- **No raster images / Storage** — that is Stage 2 (§16.2 decision 2).
+- **No `reading` / alt-text, no `display` key** — that is Stage 3 (§16.2
+  decision 3, §16.6 O-3).
+- **No AI generation, no image → editable** — that is Stage 4 (§16.2 decisions
+  6 and 7).
+- **No expansion of the locked expression grammar** — §16.7 is closed; a new
+  function, operator or constant is a separate decision, not a Stage 1
+  convenience.
+- **No raw SVG changes** — §16.2 decision 5.
+
+Two more, and they are **[stage-1 scope]** rather than **[roadmap]**: the
+roadmap states both of **Stage 0** (§16.2 decision 1 — *"Zero database, schema,
+policy, migration or renderer changes"* — and §16.6's *"Stage 0 does not"*
+list) and never of Stage 1. Stage 1 adopts them by explicit approval, and they
+are labelled so that a later reader is not told the document already said them:
+
+- **No new schema** — no table, column, policy, grant, RPC or migration.
+- Stage 1 does not change the database, any policy, any grant, any RPC,
+  Teacher Exams' or the student player's access model, or the analyzer
+  boundary. The Stage 0 sentence *"`git diff -- supabase/` is zero lines"*
+  (§16.9) is the standard Stage 1 inherits.
+
+#### 16.10.6 · Dependencies
+
+| | | |
+|---|---|---|
+| **O-1** · the whitelisted function list | **CLOSED** 2026-09-04 | §16.7 |
+| **O-2** · sampling, precision, branch caps | **CLOSED** 2026-09-04 | §16.7.4 |
+| **O-4** · function identity | **CLOSED** 2026-09-05 | §16.7.11 |
+
+**O-1 is a hard precondition, not a courtesy.** §16.2 decision 4 states it in
+those terms: the function list is *"to be settled before any expression
+renderer is written."* All three are now closed, so **no dependency blocks
+Stage 1**.
+
+**O-3 (whether Stage 0 offers `dashed`) remains OPEN and does not block Stage
+1** — it governs what the *editor* emits, and §16.6's proposal defers `display`
+to Stage 3 either way.
+
+#### 16.10.7 · Exit criteria
+
+Stage 1 is complete when all of the following are true and have been measured,
+not asserted. Each is checkable by running something.
+
+1. **F1–F8 render**, with the branch counts of §16.7.9 reproduced exactly
+   through the Stage 0 sampler's constants (renderer density is **U-5**).
+2. **The seven O-4 obligations of §16.7.11 pass**, and its four mutants are
+   killed.
+3. **Function-identity agreement holds for every fixture** — renderer count
+   equals `hydrate('plot', spec).inputs.functions.length`.
+4. **Branch geometry is preserved** — N branches, N polylines.
+5. **The grammar-closure test passes** on every module the renderer reaches to
+   evaluate an expression, newly written **or reused**, in the shape §16.9
+   records for Stage 0: each forbidden pattern proven able to fire, and attack
+   inputs refused as unknown tokens.
+6. **Every fixture in `tests/fixtures/stimuli.json` renders as it does today**,
+   compared output-to-output rather than by inspection.
+7. **Stage 0's round trip is unmoved** — `hydrate` → `build` still holds for
+   the corpus, and the authoring side's function identity is unchanged,
+   wherever that module lives (**U-2**).
+8. **`git diff -- supabase/` is zero lines**, and the applied migration count
+   and newest version are unchanged from before the increment.
+9. **CI is green**, the whole gate, with the new checks counted and the count
+   recorded.
+10. **Every UNSPECIFIED item in §16.10.8 has been explicitly closed or
+    explicitly deferred.** An item answered only by what the code happens to do
+    is not closed. This criterion exists because the Stage 1 entry audit was
+    blocked by exactly that failure at the stage boundary.
+
+#### 16.10.8 · What remains UNSPECIFIED
+
+Recorded as gaps, **not decided here**. Each needs an explicit decision before
+or during Stage 1, in the way O-1, O-2 and O-4 were decided.
+
+- **U-1 · CLOSED by §16.10.10** (2026-09-05) — `expr` outranks `points` when
+  it is drawable; `points` are the fallback. The question it answered:
+  **which source a curve carrying BOTH `expr` and `points` draws from.**
+  Every Stage 0 curve carries both — that is the storage law (§16.7.5). §16.3
+  says `points` are *"what today's renderer draws"* and `expr` is what *"Stage 1
+  will render directly"*, which implies a preference but never states a rule.
+  Draw from `expr` and ignore `points`? Prefer `expr` and fall back? Draw
+  `points` and use `expr` only when there are none? The three differ in what a
+  teacher sees for content already authored, and **this is the only case that
+  occurs in practice** (§16.10.4 criterion 6). UNSPECIFIED.
+- **U-2 · CLOSED by §16.10.12** (2026-09-05) — the evaluator moves into one
+  new module, **`stimulus-expr.js`**, which both `stimulus-editor.js` and
+  `stimulus-view.js` depend on and which depends on neither. The question
+  it answered: **where the Stage 1 evaluator lives.** §16.9 records that the parser and
+  sampler already exist in `stimulus-editor.js`, as a module the browser and
+  the Node suite run as the same bytes. Whether Stage 1 reuses that module,
+  moves it to a shared core, or writes a second evaluator is not stated. The
+  repository's `_shared/` single-source pattern and §16.2's *no parallel visual
+  system* both point one way, but **pointing is not deciding**, and a second
+  evaluator would be exactly the divergence §16.7.11 warns about. UNSPECIFIED.
+- **U-3 · CLOSED by §16.10.13** (2026-09-05) — **Policy A**: Stage 1 reaches
+  every page that loads `stimulus-view.js`, with no source-level exception
+  inside `exam.html`, and ships as ONE increment. The question it answered:
+  **which surfaces Stage 1 reaches, and when it deploys.** Stage 0 is
+  BUILT, NOT DEPLOYED (§16.9). Whether Stage 1 ships with it, after it, or
+  separately — and whether it reaches the student player, the staff pages, or
+  both — is not stated anywhere. UNSPECIFIED.
+- **U-4 · CLOSED by §16.10.10** (2026-09-05) — the note survives, narrowed to
+  the case where nothing can be drawn from either source. The question it
+  answered: **what becomes of the *"defined by a formula and is not drawn
+  here"* note.** It is the renderer's honest-degradation path for a curve with no
+  points, and `tests/stimulus-view.test.mjs:112-113` asserts it fires for
+  `{expr: 'x^2'}` with no points — **an assertion Stage 1 will make false**.
+  Whether the note is removed, narrowed to unsupported expressions, or kept for
+  a parse failure is not stated. UNSPECIFIED, and it is a shipped contract, so
+  it cannot be changed silently.
+- **U-5 · CLOSED by §16.10.11** (2026-09-05) — the renderer samples at
+  **exactly the Stage 0 constants**: 201 samples, `DP = 4`,
+  `MAX_BRANCHES = 8`, `MIN_POINTS = 2`. The question it answered: **the
+  rendering resolution.** O-2 fixed 201 samples and 4 decimal
+  places **for storage** (§16.7.4). Whether the renderer resamples for display,
+  and at what density, is a separate question O-2 did not answer. §16.7.11's
+  *"introduces no new sampling constant"* binds the **test fixtures**; it does
+  not settle the renderer. UNSPECIFIED.
+
+#### 16.10.9 · Scope of this section
+
+This section defines Stage 1. It **implements nothing**: no renderer, no
+evaluator, no test, no Stage 0 change, no database or schema change, no
+migration. Stages 2–4 are untouched. The first Stage 1 increment is the
+expression renderer, built on the closed O-4 decision — and it starts by
+closing U-1, U-2 and U-4, because all three change what it must be written to
+do.
+
+#### 16.10.10 · U-1 + U-4 CLOSED — the `expr` / `points` precedence (2026-09-05)
+
+Read-only audit, then a decision. No code, no test, no schema. U-1 and U-4 are
+**one** decision — U-1 asks which source a curve carrying both keys draws from,
+U-4 asks what happens to the *"defined by a formula and is not drawn here"*
+note — and the same truth table settles both. Deciding them apart would have
+risked a rule that contradicts itself at the boundary.
+
+##### The rule, LOCKED
+
+> **U-1/U-4 (CLOSED).** For every curve in a `plot`, in this order:
+>
+> 1. A curve with a **string `expr`** that is **drawable** is rendered **from
+>    `expr`**; `points` are not consulted.
+> 2. A curve whose `expr` is **not drawable** falls back to its stored
+>    `points` and draws them, if it has a drawable set.
+> 3. A curve that can be drawn from **neither** emits the existing note.
+> 4. A curve with **no string `expr`** renders exactly as today, from
+>    `points`. A **non-string** `expr` is treated as **absent**.
+> 5. `points` remain **stored** in every case.
+
+##### `drawable` is a named predicate, and only half of it is closed here
+
+It splits in two, and the halves have different owners:
+
+- **not drawable — parse failure.** Fully determined by the locked §16.7.1
+  grammar and **independent of sampling density**, so it is **closed by this
+  decision**. Measured: `@@bad@@` returns the identical sentence on
+  `[-5,5]²`, `[0,1]²` and `[-100,100]²`.
+- **not drawable — no drawable part in range.** Depends on how the renderer
+  samples. **Whether a given expression is in this state is U-5's to define**
+  and is NOT closed here.
+
+**The boundary, stated exactly:**
+
+> **U-1/U-4 fixes what happens in each row of the table below. U-5 fixes which
+> row a given `(expr, xRange, yRange)` lands in.**
+
+##### Provenance of each rule
+
+| Rule | Label | Basis |
+|---|---|---|
+| **1** · `expr` outranks `points` | **[roadmap]** | §16.7.11 — *"Stage 1 renders from `expr`; `points` stay the answer for any renderer that does not evaluate one"*; §16.3 — *"the points are what **today's** renderer draws"* |
+| **2** · fallback to `points` on failure | **[design decision]** | R-C chosen over R-A. The roadmap requires no fallback; R-A would leave a blank graph beside usable points |
+| **3** · the note survives, narrowed | **[design decision]** | Keeps the mechanism §16.3 and §16.7.5 both cite, but in **strictly fewer** cases than today. The narrowing is the decision |
+| **4** · non-string `expr` is absent | **[design decision]** | Forced by **V-1** below; the roadmap never contemplates it |
+| **5** · both stay stored | **[roadmap]** | §16.7.5, restated by O-4 in §16.7.11 |
+
+**[stage-1 scope] is used for none of the five**, correctly: not one of them is
+a Stage 0 constraint being adopted.
+
+##### The evidence
+
+**The boundary is narrow.** Exactly two modules read `curves[]` —
+`stimulus-view.js:266` (`renderPlot`, the only renderer, which **never** reads
+`.expr`) and `stimulus-editor.js:476-488` (`hydratePlot`). `exam.html`,
+`teacher-exams.html` and `teacher-homework.html` all go through
+`StimulusView.render()`. So this decision has **one implementation site and one
+agreement site**.
+
+**`expr` alone has always been a complete curve.** `exam_stimulus_spec_ok`,
+read from production, validates a curve with a **disjunction** —
+`(expr is a string) OR (points is an array of length >= 2)` — in a validator
+that predates Stage 0. Calling the live function: `{"expr":"x^2"}` →
+`storable = true`. Rule 1 is therefore not an extension of the storage model.
+
+**Stage 0 can neither author nor edit an expr-only curve** (measured on the
+shipped module): `build` emits **both** keys on every path, and `hydrate`
+refuses a curve with no `points` into Advanced. Combined with a live corpus of
+**12 stimuli, 5 plots, 6 curves and `expr` on zero of them**, this is what
+disqualified the points-authoritative candidate: it would have made Stage 1 an
+increment observable only on hand-written Advanced JSON, which §16.2 decision 5
+says the normal teacher workflow never requires.
+
+**Failure kinds were already distinguished** before this decision (§16.7.3, and
+measured): a parse failure returns its own teacher-facing sentence, while
+`1/0` parses and returns *"This function has no drawable part in the range you
+set."* `1/0` is empty at **any** density, so row 5 below is non-empty however
+U-5 resolves.
+
+##### The truth table
+
+Outcomes are determined for all eleven rows. **Membership** — which row an
+input lands in — is U-5-dependent for five of them.
+
+| # | curve | storable | today | closed rule | membership |
+|---|---|---|---|---|---|
+| 1 | `points`(≥2), no `expr` | ✓ design | draws | **unchanged** | closed |
+| 2 | `points`(1), no `expr` | ✓ **V-1** | 1-vertex polyline | **unchanged** | closed |
+| 3 | `expr` only, drawable | ✓ design | note | **draws from `expr`** | **U-5** |
+| 4 | `expr` only, **parse failure** | ✓ design | note | **note** | closed |
+| 5 | `expr` only, empty in range | ✓ design | note | **note** | **U-5** |
+| 6 | `expr`+`points`, drawable, agreeing | ✓ design | draws points | **draws from `expr`** | **U-5** |
+| 7 | `expr`+`points`, drawable, **disagreeing** | ✓ design | draws points | **draws from `expr`** | **U-5** |
+| 8 | `expr`+`points`, **parse failure** | ✓ design | draws points | **draws points** | closed |
+| 9 | `expr`+`points`(1 or `[]`), drawable | ✓ **V-1** | invisible / note | **draws from `expr`** | **U-5** |
+| 10 | non-string `expr` + `points` | ✓ **V-1** | draws points | **draws points** | closed |
+| 11 | neither key | ✓ **V-1** | note | **note** | closed |
+
+Rows 1, 2 and 11 are the points-only guarantee. Rows 4 and 5 are where the
+U-4 note **survives**; row 3 is where it **disappears**. **Row 7 is U-1's
+core**, and it is the only row that separates the three candidate rules.
+
+##### The discriminating mutants
+
+Nine of the ten are assertable the moment this rule is implemented; one waits
+for U-5.
+
+| # | Boundary | Test | Mutant killed | U-5? |
+|---|---|---|---|---|
+| **M-1** | row 7 — U-1's core | `{expr:'x^2', points:[straight line]}` → the drawn path is **non-monotonic in y** (a parabola), not monotonic (the line) | prefer `points` | independent |
+| M-2 | row 3 | `{expr:'x^2'}` → a path is drawn, **no** formula note | keep the `unplottable` path | independent |
+| M-3 | rows 1-2 | every points-only fixture still draws, with the **same counts of polyline / circle / polygon and the same labels**, and no formula note | route points-only through the evaluator | independent |
+| M-4 | row 8 | `{expr:'@@bad@@', points:P}` → the points still draw | strict `expr`-only → blank | independent |
+| M-5a | row 4 | `{expr:'@@bad@@'}` → note, nothing drawn | drop the note | independent |
+| M-5b | row 5 | `{expr:'1/0'}` → note, nothing drawn | drop the note | **dependent** |
+| M-6 | row 9 | `{expr:'x^2', points:[[0,0]]}` → a visible path, not a 1-vertex polyline | prefer `points` | independent |
+| M-7 | row 10 | `{expr:123, points:P}` → points draw, evaluator never called | treat a truthy `expr` as an expression | independent |
+| M-8 | O-4 agreement | renderer function count `===` `hydrate('plot', spec).inputs.functions.length` | global grouping | independent |
+| M-9 | **equivalent guard** | reorder the two fallback branches, behaviour identical | **must SURVIVE** | independent |
+
+**M-1 is shape-based on purpose.** Asserting a vertex count would make it
+depend on U-5; asserting the shape does not. Measured on today's renderer: the
+fixture draws the straight line (monotonic in y, 5 vertices), and a real `x^2`
+sampling is non-monotonic. **The live corpus cannot discriminate here** —
+stored points always agree with their `expr` — so the fixture must be built to
+disagree.
+
+**M-3 preserves rendered behaviour, not bytes.** A byte-identical requirement
+would turn an implementation detail into a contract, and density is exactly
+what changes the bytes; if such a guard is wanted it belongs with **U-5** and
+needs its own justification.
+
+**`tests/stimulus-view.test.mjs:112-113` is replaced by M-2 + M-5a, not
+deleted.** The contract *"an expression curve is reported, not dropped in
+silence"* survives verbatim for rows 4 and 5; only its fixture changes, from a
+drawable `x^2` to an expression that cannot be drawn.
+
+##### V-1 · an open defect found while measuring this, NOT fixed here
+
+`exam_stimulus_spec_ok` **fails open** on three curve shapes, through SQL
+three-valued logic rather than by design: `jsonb_typeof()` of an absent key is
+NULL, `NULL or false` is NULL, and `not NULL` never flags the row. Measured on
+production:
+
+| curve | `expr` arm | `points` arm | flagged invalid? |
+|---|---|---|---|
+| `{"expr":"x^2"}` | true | null | false — **by design** |
+| `{"expr":"x^2","points":[[0,0]]}` | true | false | false — **by design** (the ≥2 floor is bypassed) |
+| `{"points":[[0,0]]}` | null | false | **null — fails open** |
+| `{}` | null | null | **null — fails open** |
+| `{"expr":123}` | false | null | **null — fails open** |
+
+So a curve with **neither key** is storable today. This is why rule 4 exists
+and why rows 2, 9, 10 and 11 are in the table at all: the renderer cannot
+assume any shape. **V-1 is recorded, not fixed** — it is a storage-layer
+decision of its own, and Stage 1 changes no database object.
+
+##### What this does NOT close
+
+- **U-5 · CLOSED by §16.10.11** (2026-09-05). It was BLOCKING, and the reason
+  given here was **wrong**: this bullet claimed that
+  `tests/stimulus-editor.test.mjs:419` (two polylines for `1/x`) becomes
+  density-dependent. **Measured, it does not** — `1/x` yields 2 branches at
+  every density from 51 to 1601, so that assertion is density-INDEPENDENT.
+  The dependency was real but the example was not: the density-sensitive cases
+  are **`tan(10*x)` / F8**, where the branch count moves 1 → 5 → 8-capped, and
+  the **visibility gate**, which rejects `x^2` in `y=[-0.01,0.01]` below 101
+  samples. The second is what made U-5 genuinely blocking — until the density
+  was fixed, rule 1's *"drawable"* predicate had no value.
+- **U-2 stays OPEN.** Nothing here says where the evaluator lives.
+- **U-3 stays OPEN.** Nothing here says which surfaces Stage 1 reaches or when
+  it deploys.
+- **V-1 stays OPEN**, above.
+- **The grammar is consumed, not extended** — "drawable" means exactly what
+  §16.7.1-16.7.4 already define, and §16.7 remains locked.
+
+#### 16.10.11 · U-5 CLOSED — the renderer's sampling density (2026-09-05)
+
+Read-only audit, then a decision. No code, no test, no schema, and **the Stage
+0 sampler was not modified**.
+
+##### The rule, LOCKED
+
+> **U-5 (CLOSED).** Stage 1's renderer samples an `expr` at **exactly the
+> Stage 0 constants** — **201 samples, `DP = 4`, `MAX_BRANCHES = 8`,
+> `MIN_POINTS = 2`** — and derives branches by the §16.7.4 rules unchanged.
+> It introduces **no new sampling constant**, and the four values have
+> **exactly one definition in the shipped source**.
+
+| Clause | Label | Basis |
+|---|---|---|
+| the four constants, reused exactly | **[design decision]** | R-1 chosen over R-2/R-3/R-4 below; the roadmap fixes no render density |
+| no new sampling constant | **[roadmap]** | §16.7.11's obligation, already binding |
+| exactly one source definition | **[design decision]** | drift prevention; the repository's `_shared/` single-source pattern is the precedent, not a roadmap statement about Stage 1 |
+
+##### Method, and why it is not vacuous
+
+The constants are module-private, so the measurements below ran the **real
+shipped algorithm at other densities**: `stimulus-editor.js` was loaded into a
+fresh VM context with `var SAMPLES = 201;` rebound and **every other byte
+identical**. The harness refuses to run if the anchor moved or the rebind did
+not apply, and its self-check reproduces **all 7 pinned §16.7.9 fixtures at
+201** — a harness that could not reproduce them would prove nothing about the
+densities it varies.
+
+##### Storage guarantees are not rendering guarantees
+
+`stimulus-editor.js:38-41`, read against `sample()` at `:219-252`:
+
+| constant | what it guarantees for STORAGE | what it implies for RENDERING |
+|---|---|---|
+| `SAMPLES = 201` | how many candidate points exist to store | **nothing** — a stored polyline can be re-derived at any N |
+| `DP = 4` | §16.7.10 rule 4's *"rounded once to 4 decimal places"* — a **stored-value** precision | **nothing**; a render path need not round at all |
+| `MAX_BRANCHES = 8` | at most 8 curves per function in the spec | a cap on drawn polylines **only if** the renderer re-derives them |
+| `MIN_POINTS = 2` | `exam_stimulus_spec_ok` requires `points >= 2` — **the database's own floor** | nothing directly; it is a storability rule |
+
+`MIN_POINTS` is the only one with an external anchor. **No roadmap sentence
+tells the renderer what density to use**, which is why U-5 was a real gap and
+not an oversight.
+
+##### The measurements
+
+Branch counts, N = 51 … 1601, pinned fixtures:
+
+| | 51 | 101 | 201 | 401 | 801 | 1601 |
+|---|---|---|---|---|---|---|
+| F1 `x^2-4*x+3` · F2 `2*x+5` · F3 `sin(x)` · F4 `sqrt(x+2)` · F5 `ln(x)` | 1 | 1 | 1 | 1 | 1 | 1 |
+| F6 `1/x` | 2 | 2 | 2 | 2 | 2 | 2 |
+| F7 `tan(x)` on `[-5,5]` | **5** | **5** | **5** | **5** | **5** | **5** |
+| F8 `tan(x)` on `[-20,20]` | **5** | 8 capped | 8 capped | 8 capped | 8 capped | 8 capped |
+
+Twelve adversarial fixtures — poles landing **on** a grid point
+(`1/(x-2.5)`), **between** grid points (`1/(x-2.525)`), `1/(x-0.001)`,
+`1/x^2`, `1/(x^2-1)`, `x^5`, `sqrt(x)`, `ln(x)` and `sin(50*x)` — are all
+**density-stable**. Only two are not:
+
+| fixture | 51 | 101 | 201 | 401 | 801 | 1601 |
+|---|---|---|---|---|---|---|
+| **`tan(10*x)`** | **1** | **5** | 8 capped | 8 capped | 8 capped | 8 capped |
+| **`x^2` in `y=[-0.01,0.01]`** | **REJECTED** | ok | ok | ok | ok | ok |
+
+At N = 51 `tan(10*x)` draws **through** its poles as a single curve, which is
+wrong rather than merely coarse. The second is the **visibility gate**
+(`sampleFunction` rejects when `visible < 2`), and it is why U-5 was blocking:
+until the density is fixed, U-1/U-4's *"drawable"* predicate has no value.
+
+**Count stability is not geometry stability.** Turning points drawn against
+the true function:
+
+| | 51 | 101 | 201 | 401 | 801 |
+|---|---|---|---|---|---|
+| `sin(20*x)` — truth 64 | **36** | 64 | 64 | 64 | 64 |
+| `sin(50*x)` — truth 159 | **40** | **40** | 158 | 158 | 158 |
+
+Nyquist gives the mechanism: `sin(50*x)` gets **0.6 / 1.3 / 2.5** samples per
+period at N = 51 / 101 / 201.
+
+**Going higher costs and gains nothing measured.** SVG bytes for one
+`x^2-4*x+3` curve through the live renderer: **1.52x at 401, 2.53x at 801,
+4.59x at 1601, 8.78x at 3201** — while no fixture gains a branch or a turning
+point. A precision conflict also opens: at a vertex one step changes `y` by
+`dx^2`, so once `dx^2 < 5e-5` consecutive samples share an identical rounded
+`y` and the curve stair-steps. Measured flattening: **0.0% at N <= 801**,
+0.1-0.6% at 1601, up to **1.3% at 3201** — the threshold is exactly N ~ 1601.
+
+##### Candidates rejected
+
+- **R-2 · a separate display density (401 / 801).** Rejected: 1.5-2.5x the
+  bytes for **zero measured shape gain** on any fixture, and it makes the
+  primary and the fallback paths draw **different figures**.
+- **R-3 · adaptive density**, derived from the viewport or the x-range.
+  Rejected: a new policy the roadmap does not authorise, it makes branch count
+  a function of viewport so §16.7.9's fixtures stop being pinnable, and it
+  makes the tests non-deterministic.
+- **R-4 · reuse the constants but skip `DP` rounding on the render path.**
+  Rejected as **measurably a no-op**: flattening is 0.0% at 201, so its only
+  benefit appears at densities R-1 never reaches.
+
+##### Why R-1, stated as evidence
+
+1. **It is the only rule under which the primary and the fallback paths
+   agree.** §16.10.10 rule 2 lets a fallback to stored `points` fire at any
+   time; at any other density the two paths draw different figures, so a parse
+   regression would silently change the drawing.
+2. **Both bounds converge on 201.** Below it, structure is lost — measured:
+   `tan(10*x)` through its poles, F8 down three branches, the visibility gate
+   refusing a fixture it should accept, `sin(20*x)` and `sin(50*x)` under
+   Nyquist. Above it, nothing is gained and bytes grow 1.5-8.8x, with `DP = 4`
+   fighting the density past 801. **201 is the lowest density at which no
+   measured fixture loses structure and the highest at which nothing is
+   wasted.**
+3. §16.7.9's eight fixtures become **renderer invariants for free** — they
+   were derived at these constants.
+4. The literal `201` appears **exactly once** in shipped source
+   (`stimulus-editor.js:38`). Keeping it so is a constraint, not an accident.
+
+##### F7 — which invariant belongs to which layer
+
+| N | runs | discarded | **kept** | sizes |
+|---|---|---|---|---|
+| 51 | 7 | 2 | **5** | `[2,15,15,15,2]` |
+| 201 | 13 | **8** | **5** | `[5,61,61,61,5]` |
+| 1601 | 33 | 28 | **5** | `[43,496,495,496,43]` |
+
+The kept count is **5 at every density**; the discarded count is not. So:
+
+- **"5 branches" is a RENDERER invariant** — density-stable, mathematically
+  right (4 poles → 5 intervals), and what a student sees.
+- **"8 discarded runs" stays a STORAGE-only invariant.** It is an artefact of
+  run-splitting at one N. §16.7.10 already pins it in the editor suite;
+  promoting it to a renderer invariant would pin an implementation detail.
+
+##### The discriminating mutants
+
+| # | Test | Kills |
+|---|---|---|
+| **D-1** | `tan(10*x)` on `[-5,5]` → **8** branches | any density < 201 (51 → 1, 101 → 5) |
+| **D-2** | `x^2` in `y=[-0.01,0.01]` renders rather than being rejected | density <= 51 |
+| **D-3** | `sin(20*x)` draws at least 60 turning points | density <= 51 (36) |
+| **D-4** | **primary ≡ fallback** — the same function rendered from `expr` and from its stored `points` produces the **identical** SVG | *every* density rule except R-1; this is the test that pins the decision |
+| **D-5** | F1-F8 branch counts drawn by the renderer equal §16.7.9's table | any density where F8 ≠ 8 |
+| **D-6** | the sampling constants appear **once** in shipped source | a second hard-coded `201` — the drift hazard |
+| **D-7** | *equivalent guard* — reorder the branch-keeping loop, behaviour identical | **must SURVIVE**, proving the suite pins behaviour and not source text |
+
+##### What U-5 settles for U-1/U-4
+
+It **completes the predicate U-1/U-4 deferred.** *"Not drawable — no drawable
+part in range"* now means: `sampleFunction`, at these constants, returns an
+error — no branches, or `visible < 2`. §16.10.10's rows **3, 5, 6, 7 and 9**
+gain determinate membership, and **M-5b is now assertable with any fixture**,
+not only the unconditional `1/0`.
+
+##### Consequence for U-2 — identified, NOT resolved
+
+R-1 means the renderer needs **exactly** what `sampleFunction` already
+computes, at exactly its constants. Reuse becomes the cheap option and a second
+evaluator now has to justify duplicating four constants and a pinned
+algorithm — but **U-2 stays open**, because at least three shapes satisfy R-1:
+the renderer imports `stimulus-editor.js`; the sampler moves to a shared core
+both import; or a thin wrapper is added. **R-1 is neutral among them and
+chooses no placement.**
+
+Two things U-5 hands U-2. A **constraint**: whichever shape wins, the four
+constants must have one definition, enforced by D-6. And a **tension**,
+recorded rather than blocking: `DP = 4` is a storage precision with no
+rendering purpose, so reusing `sampleFunction` verbatim inherits it — which
+costs **0.0% at 201**, measured. A cleanliness question, not a correctness one.
+
+##### Still open
+
+**U-2** and **U-3** remain OPEN. **V-1** remains OPEN and unfixed. The grammar
+is consumed, not extended. The Stage 0 sampler is **unmodified** — the harness
+rebinds a constant in memory and writes nothing.
+
+#### 16.10.12 · U-2 CLOSED — where the Stage 1 evaluator lives (2026-09-05)
+
+Read-only audit, then a decision. No code, no test, no HTML, no schema.
+
+##### 1 · Placement, LOCKED
+
+> **U-2 (CLOSED).** The expression evaluator moves into **one new browser
+> module, `stimulus-expr.js`** — the constants, `normalize`, `tokenize`,
+> `parse`, `evalAt`, `sample` and `sampleFunction`. **`stimulus-editor.js` and
+> `stimulus-view.js` both depend on it; neither depends on the other.** It is
+> the **one definition** of the four constants U-5 locked.
+
+**[design decision]** — the roadmap names no location, and three of the five
+options were eliminated on recorded rules rather than taste (below).
+
+**The split was proved by execution, not by reading.** Lines 34-263 of today's
+`stimulus-editor.js` were extracted into a candidate module and run in a fresh
+VM: it **runs in isolation**, carries all four constants (`201 / 4 / 8 / 2`),
+and is **15/15 behaviourally identical** to the shipped module across F1-F8,
+`tan(10*x)`, the visibility-gate fixture and every error path, with `normalize`
+parity too. It is **10,558 bytes of 25,921** — 41% of the module.
+
+**No cycle is created**, because the dependency inside the module is already
+one-way: `buildPlot` calls `sampleFunction`, and nothing in the expression half
+calls the authoring half. Today the two modules do not reference each other
+**at all** — `stimulus-editor.js` names `stimulus-view.js` only in a header
+comment, and `stimulus-view.js` never mentions the editor.
+
+**Why not the alternatives:**
+
+- **A · `stimulus-view.js` reads `window.StimulusEditor`.** Rejected: it makes
+  the student-facing renderer depend on the authoring module, and costs
+  **+26,482 B (+18%)** on `exam.html` against **+10,558 B (+7%)** for this
+  option — while `teacher-homework.html` pays **net zero** under B.
+- **C · duplicate the sampler in the renderer.** Rejected by U-5's **D-6**: the
+  constants would have two definitions.
+- **D · a thin wrapper around the editor's export.** Strictly worse than A —
+  adds a file and still ships the whole editor.
+- **E · inject the sampler per page.** Rejected on a design ground: the same
+  spec would draw differently depending on page wiring, which contradicts one
+  renderer, makes U-1/U-4 page-dependent, and makes U-5's **D-4** untestable as
+  a global property.
+
+**Relocation is authorised by §16.10.7 exit criterion 7**, which pins Stage 0's
+behaviour and not its location: *"the authoring side's function identity is
+unchanged, **wherever that module lives** (U-2)."*
+
+##### 2 · The name, and why NOT `*.core.js`
+
+**`*.core.js` has one meaning in this repository, in 2 of 2 occurrences: an
+authored source that has a generated byte-copy, a sync script and a CI drift
+guard.**
+
+| authored source | generated copy | sync | drift guard |
+|---|---|---|---|
+| `taxonomy.core.js` | `taxonomy.js` **and** `supabase/functions/_shared/taxonomy.core.js` | `scripts/sync-taxonomy.mjs` | `validate-taxonomy.mjs` |
+| `supabase/functions/_shared/study-planner.core.js` | `study-planner.js` | `scripts/sync-study-planner.mjs` | `validate-study-planner.mjs` |
+
+Both copies carry an `AUTO-GENERATED … DO NOT EDIT` banner. **This module has
+no copy and will have none** — both consumers are browser modules served from
+this origin, and the Node suites run the same bytes. Naming it `*.core.js`
+would send the next reader looking for a `sync-stimulus-expr.mjs` and a drift
+check that do not exist.
+
+`stimulus-expr.js` also completes the family with one concern each:
+**`stimulus-view.js` draws · `stimulus-editor.js` authors ·
+`stimulus-expr.js` evaluates.**
+
+Its header must say, in the family's `/* name — one-line purpose */` shape,
+three things: that it is the ONE definition of the four constants and that
+changing one changes **both** what Stage 0 stores and what Stage 1 draws; that
+it is **not a generated file**, with the two `*.core.js` cases named so the
+distinction is explicit; and that it **depends on nothing**, which is what
+keeps the layering acyclic.
+
+##### 3 · API compatibility, LOCKED
+
+**`stimulus-editor.js` keeps re-exporting the expression API** — `normalize`,
+`parse`, `sampleFunction`, `SAMPLES`, `DP`, `MAX_BRANCHES`, `MIN_POINTS` and
+`FUNCTION_NAMES`, which are **8 of its 11 exports** — so its public surface is
+unchanged. **`tests/stimulus-editor.test.mjs` is NOT modified by this
+decision**, and its **194 checks remain the regression guard** for Stage 0
+behaviour: an extraction that changed behaviour would turn them red.
+
+##### 4 · The missing-evaluator contract, LOCKED
+
+> **The evaluator is a required dependency of the renderer, not an optional
+> enhancement.** Five clauses; the first makes the third unreachable in any
+> shipped page.
+
+- **C-1 · Static contract.** Every HTML page containing
+  `<script src="stimulus-view.js">` must also contain
+  `<script src="stimulus-expr.js">`. A contract test asserts it over the page
+  sources, with a **detector-fires guard** — a page with the tag removed must
+  make the test go red. Deterministic, no browser, cannot flake.
+- **C-2 · Resolution is lazy, at call time** — `require()` under Node,
+  `window.StimulusExpr` in the browser. This is the house pattern, stated at
+  `taxonomy-compat.js:16`: *"Taxonomy is resolved lazily from the global, so
+  load order never matters."* **No page needs its scripts reordered**, and
+  `stimulus-view.js` stays where it sits.
+- **C-3 · Loud and distinguishable.** A string `expr` met with no evaluator is
+  a **deployment fault, never an undrawable expression**. The renderer writes
+  ONE developer-facing `console.error` reading exactly *"Stage 1 expression
+  evaluator is missing: load stimulus-expr.js before rendering expression
+  curves."*, and marks the note it emits with
+  **`data-fault="missing-evaluator"`** — the existing `sv-note` class, plus a
+  dedicated `data-` attribute. **That attribute is what distinguishes the
+  deployment fault from U-1/U-4 rule 3's** *"defined by a formula and is not
+  drawn here"*; the two must never be confusable, and the distinction **adds
+  no renderer class token and no CSS rule**.
+- **C-4 · Correct output is never withheld.** A curve carrying **both** `expr`
+  and drawable `points` still draws its points when the evaluator is absent —
+  that output is correct, and refusing it would turn a dependency fault into a
+  content regression. The fault is still caught, by C-1 before it ships and by
+  C-3 at runtime.
+- **C-5 · Points-only content is untouched**, evaluator or not. Measured: the
+  live corpus — 12 stimuli, 5 plots, 6 curves — carries **zero** `expr`, so a
+  missing evaluator cannot affect any stimulus in production today.
+
+**The mechanism is borrowed; the posture is inverted.** C-2 takes
+`taxonomy-compat.js`'s lazy resolution but **not** its graceful degradation.
+That module degrades quietly because a display name has an honest fallback —
+the legacy string. A missing evaluator has no honest fallback for an expr-only
+curve: the only one available is a message that lies about the cause.
+
+**Why this does not make the renderer page-dependent.** The renderer's rule is
+one function of `(spec, evaluator-present)`, and **C-1 guarantees
+`evaluator-present` is true on every page that loads the renderer** — so across
+every shipped configuration the renderer behaves identically. The
+evaluator-absent branch is not a second rendering mode; it is an assertion that
+can only fire in a build C-1 rejects. **C-1 is what lets C-3 be loud without
+being a variant.**
+
+**Why U-1/U-4 survives intact.** Rule 1 is unchanged and needs the evaluator,
+which C-1 guarantees. **Rule 2 is unchanged and NOT extended** — C-4 lets
+points draw with no evaluator, but that is a *different condition* from "expr
+not drawable", and the contract states the distinction so no later reader
+collapses them. Rule 3 keeps its exact wording and meaning, and C-3 gives the
+deployment fault a **different** marker — which is precisely what stops a
+missing script masquerading as an undrawable formula. Rules 4 and 5 are
+untouched.
+
+##### 5 · The implementation boundary
+
+Create:
+
+1. **`stimulus-expr.js`** — lines 34-263 of today's `stimulus-editor.js`.
+
+Modify:
+
+2. **`stimulus-editor.js`** — remove the extracted half, depend on the
+   evaluator, re-export per §3. *This is a Stage 0 file; exit criterion 7
+   permits it because it pins behaviour, not location.*
+3. **`stimulus-view.js`** — C-2 resolution, the U-1/U-4 render path at U-5's
+   constants, C-3's marker.
+4. **`exam.html`** · 5. **`teacher-exams.html`** ·
+   6. **`teacher-homework.html`**
+   — one `<script src="stimulus-expr.js">` tag each. Order is free by C-2.
+
+**Six files, and no seventh — because the marker is an attribute, not a
+class.** A new `sv-` class would have cost two further edits, and the cost was
+measured, not guessed: `tests/renderer-css-parity.test.mjs:65` asserts **`the
+renderer emits 30 class tokens`** as a hard count derived from the renderer's
+stripped source, and all three pages must carry a CSS rule for every token — so
+an `sv-fault` class would make that count **31** and need a rule on all three
+pages, or CI goes red on both grounds. `data-fault="missing-evaluator"` carries
+the same semantic distinction for none of that:
+**`tests/renderer-css-parity.test.mjs` and the pages' CSS do not change for
+this distinction at all.**
+
+**The attribute's NAME is load-bearing, and that was measured rather than
+reasoned.** The suite derives its token list with `/\bsv(?:-[a-z0-9-]+)?\b/`
+over the **whole stripped source**, not over class attributes — so the obvious
+name **`data-sv-fault` would still be counted as the token `sv-fault`** and
+would carry the full cost anyway. Measured: `data-sv-fault` matches,
+`data-fault` and `data-stimulus-fault` are clean. Anything containing `sv-`
+is not.
+
+Weight, measured: `exam.html`'s local JS goes **144,025 → 154,583 bytes
+(+7%)**; `teacher-homework.html` is **net zero**, because the editor shrinks
+26,482 → 15,924 by exactly what the new module carries.
+
+**Tests are a later implementation step and are not part of this closure** —
+the `stimulus-expr.js` suite, C-1's static contract, and U-1/U-4's M-1…M-9
+alongside U-5's D-1…D-7.
+
+##### 6 · Still open
+
+**U-3 remains OPEN**, and this decision survives it either way: if U-3 later
+restricts Stage 1 to staff surfaces, `stimulus-expr.js` is still the right
+module and `exam.html` simply does not load it — whereas option A would have
+shipped the authoring editor to students for nothing. C-1's rule would then
+narrow from *every page loading the renderer* to *every page loading the
+renderer that may meet an `expr`*, and would need re-stating.
+
+**V-1 remains OPEN and unfixed.** The grammar is consumed, not extended.
+
+#### 16.10.13 · U-3 CLOSED — which surfaces Stage 1 reaches, and when it ships (2026-09-05)
+
+Read-only audit, then a decision. No code, no test, no HTML, no schema.
+
+##### The policy, LOCKED
+
+> **U-3 (CLOSED) · Policy A.** Stage 1 reaches **every page that loads
+> `stimulus-view.js`** — `exam.html`, `teacher-exams.html` and
+> `teacher-homework.html`. **There is no source-level exception inside
+> `exam.html`**: its `platform`, `teacher` and `homework` paths use the same
+> renderer contract, and Stage 1 stays consistent across all three.
+
+**[design decision]** — the roadmap names no surface scope, and the rejected
+alternative is recorded below.
+
+**Consistent with U-2 by construction.** §16.10.12's **C-1** already requires
+that every page loading `stimulus-view.js` also load `stimulus-expr.js`.
+Policy A is that rule and nothing more; it needs no new machinery, and it is
+why §16.10.12 §6 could say this decision survives U-3 either way.
+
+##### What the surface inventory actually is
+
+**`exam.html` is the SINGLE student delivery surface** for all three systems —
+platform exams, teacher exams and homework. There is no `homework.html` and no
+separate student-exams page; the repository has 53 root pages and neither
+exists on `main`. `dashboard.html` carries a summary card whose one button
+reads *"Open homework and exams"* and whose own comment gives the reason:
+*"two doors into the same list is how a student ends up believing there are
+two lists."*
+
+`exam.html` has exactly **three** `StimulusView.render()` call sites, and
+**none of them branches on `S.source`**:
+
+| line | function | serves |
+|---|---|---|
+| 891-892 | `hwRender()` | homework, sitting screen |
+| 1051 | `hwReviewItem()` | homework, review screen |
+| 1196-1197 | `renderItem()` | **platform AND teacher**, question screen |
+
+`S.source` dispatches start / save / submit (`:434`, `:444`, `:492`) and
+**never rendering**. Platform and teacher already share one render site.
+
+The staff previews are `teacher-exams.html:508-509` and `:606`, and
+`teacher-homework.html:941-942` and `:1069` — and they call the identical
+renderer entry point. **Teacher exam and homework previews therefore get the
+same Stage 1 behaviour as delivery**, which is the property this policy exists
+to keep.
+
+##### Why Policy B is rejected
+
+- **Page-level ("staff-only") is incoherent here.** Withholding
+  `stimulus-expr.js` from `exam.html` would withhold expression rendering from
+  **teacher-authored papers on the very screen students sit them**. A teacher
+  would author a formula, see it drawn in preview, publish it — and their
+  student would be told it *"is not drawn here"*. That is not staff-only; it is
+  a **preview/delivery mismatch**.
+- **Source-level branching inside `exam.html`** would require *new* branching
+  at render sites that have none today, and would thread `S.source` into
+  `renderItem()` for the first time — making U-1/U-4 source-dependent.
+- **Per-call configuration** is **option E, already rejected in §16.10.12**: it
+  makes the same spec draw differently by page wiring, contradicts one
+  renderer, and makes U-5's **D-4** untestable as a global property.
+
+##### Deployment timing, LOCKED
+
+> **Stage 1 ships as ONE increment after U-3 closes.** The U-2 extraction is
+> **not** shipped separately as a production increment — U-2 was a design
+> decision, and the extraction has not been written.
+
+**[design decision]** — and the reason it is safe to ship as one thing is
+measured, not assumed.
+
+**Deployment is behaviourally zero-impact on the current production corpus.**
+Measured on production 2026-09-05:
+
+| table | rows | plots | curves | **with `expr`** | with `points` |
+|---|---|---|---|---|---|
+| `exam_stimuli` (platform) | **33** | 15 | 17 | **0** | 17 |
+| `teacher_exam_stimuli` | **0** | — | — | — | — |
+| `teacher_homework_stimuli` | **0** | — | — | — | — |
+
+And nothing is sittable at all: **0 published** `exam_forms`, **0 published**
+`teacher_exams`, **0 published** `teacher_homework`. So Stage 1 changes the
+rendered output of **zero live rows on every one of the five surfaces** — not
+because the feature is inert, but because there is no `expr` in the database
+and nothing published for a student to open.
+
+*(The 12 / 5 / 6 figures quoted in §16.10.4 and §16.10.12 are
+`tests/fixtures/stimuli.json`, a verbatim subset. Production is 33 / 15 / 17.
+Both are 100% points-only, so both statements hold.)*
+
+**It is not hypothetical, though.** All three stimulus tables carry the
+identical constraint — `CHECK ((spec IS NULL) OR exam_stimulus_spec_ok(kind,
+spec))` — which permits `expr` alone (§16.10.10). So **expr-only content can
+reach a student surface today**, hand-written through either staff page's JSON
+path, and it draws the *"defined by a formula and is not drawn here"* note.
+That is the gap Stage 1 closes, and it is reachable now.
+
+Storage is untouched either way: U-1/U-4 rule 5 keeps `expr` **and** `points`
+stored, so `git diff -- supabase/` stays zero (§16.10.7 exit criterion 8), and
+points-only content is unchanged by U-1/U-4 rule 4 and §16.10.12's C-5, with
+**M-3** as the assertion.
+
+##### I-6 — recorded, NOT taken into scope
+
+`teacher-exams.html` still has **no Stage 0 visual editor**: it authors specs
+through a **`Spec (JSON)` textarea** (`:227-228`), because Stage 0 was applied
+to `teacher-homework.html` only — which has the visual editor (`:676`) **and**
+an Advanced JSON path (`:384`). So the exam page reaches `expr` only through
+raw JSON.
+
+Stage 1 arguably makes **I-6** (giving that page the visual editor) more
+pressing. **It is recorded here and nothing more.** I-6 is Stage 0 scope, it is
+not modified, and **Stage 1's scope is not expanded to include it.**
+
+##### Still open
+
+**V-1 remains OPEN and unfixed** — the storage-layer defect of §16.10.10.
+**I-6 is unchanged.** The grammar is consumed, not extended.
+
+**Every Stage 1 design decision is now closed**: O-1, O-2, O-4, U-1, U-2, U-3,
+U-4 and U-5. What remains before implementation is approval to write code, not
+a decision to take.

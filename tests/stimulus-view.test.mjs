@@ -104,11 +104,15 @@ t.ok('a non-svg media kind is refused',
 // ══ 4 · HONEST DEGRADATION ════════════════════════════════════════════════
 t.section('What it cannot draw, it says');
 
-/* Nothing here evaluates an expression. Every plot in the corpus uses points,
-   but the schema permits `expr`, and silently omitting a curve would show a
-   student a graph that is wrong rather than one that is incomplete. */
+/* The schema permits `expr`, and silently omitting a curve would show a student
+   a graph that is wrong rather than one that is incomplete.
+   STAGE 1 CHANGED THE FIXTURE, NOT THE CONTRACT (§16.10.10). `x^2` is now DRAWN
+   from its formula, so it can no longer stand for "a curve this renderer cannot
+   draw"; an expression the locked grammar refuses still can, and the promise
+   below is asserted verbatim on it. tests/stage1-render.test.mjs M-2 pins the
+   other half — that a drawable expr draws and emits no note at all. */
 const exprPlot = SV.render({ kind: 'plot', spec: { frame: 'graph', xRange: [0, 5], yRange: [0, 5],
-  curves: [{ expr: 'x^2' }, { points: [[0, 0], [1, 1]] }], figures: [{ mode: 'curve' }, { mode: 'curve' }] } });
+  curves: [{ expr: '@@bad@@' }, { points: [[0, 0], [1, 1]] }], figures: [{ mode: 'curve' }, { mode: 'curve' }] } });
 t.ok('an expression curve is reported, not dropped in silence',
   /sv-note/.test(exprPlot) && /formula/.test(exprPlot));
 t.ok('and the points curve beside it is still drawn', /<polyline/.test(exprPlot));

@@ -54,8 +54,14 @@
   }
   function r2(n) { return Math.round(n * 100) / 100; }
 
-  function note(text) {
-    return '<div class="sv-note">' + esc(text) + '</div>';
+  function note(text, fault) {
+    /* `fault` marks a DEPLOYMENT fault with a data- attribute rather than a
+       class: renderer-css-parity derives its class-token list from this file's
+       whole stripped source, so any name containing `sv-` — `data-sv-fault`
+       included — would become a 31st token needing a CSS rule on three pages.
+       `data-fault` carries the same distinction for none of that. */
+    return '<div class="sv-note"' + (fault ? ' data-fault="' + fault + '"' : '')
+         + '>' + esc(text) + '</div>';
   }
 
   // ── text ────────────────────────────────────────────────────────────────
@@ -213,6 +219,24 @@
   }
 
   // ── plot ────────────────────────────────────────────────────────────────
+  /* ── Stage 1 · the expression evaluator (stimulus-expr.js) ───────────────
+     Resolved LAZILY, at call time, so script order never matters — the pattern
+     taxonomy-compat.js already uses. The `typeof require` guard matters: this
+     file is a browser IIFE, and an unguarded require() would throw on load in
+     every page. Unlike taxonomy-compat.js this does NOT degrade quietly: a
+     missing evaluator is a DEPLOYMENT FAULT, never an undrawable expression
+     (§16.10.12 C-3), because the only quiet fallback available is a message
+     that lies about the cause. */
+  function EXPR() {
+    var m = (typeof window !== 'undefined' && window.StimulusExpr) || null;
+    if (!m && typeof require === 'function') {
+      try { m = require('./stimulus-expr.js'); } catch (_) { m = null; }
+    }
+    return m || null;
+  }
+  var MISSING_EVALUATOR =
+    'Stage 1 expression evaluator is missing: load stimulus-expr.js before rendering expression curves.';
+
   function renderPlot(spec) {
     var xr = Array.isArray(spec.xRange) ? spec.xRange : [];
     var yr = Array.isArray(spec.yRange) ? spec.yRange : [];
@@ -261,19 +285,62 @@
       svg += '<text x="' + r2(axY - 7) + '" y="' + r2(SY(gy) + 4) + '" class="sv-tick sv-tick-y">' + esc(gy) + '</text>';
     }
 
-    var unplottable = 0;
-    for (var i = 0; i < curves.length; i++) {
-      var cur = curves[i] || {};
-      var fig = figures[i] || {};
-      var mode = fig.mode || 'curve';
-      var col = SERIES_COLOURS[i % SERIES_COLOURS.length];
+    /* ── U-1/U-4 · which source a curve draws from (§16.10.10) ─────────────
+       1. a string `expr` that is DRAWABLE renders from `expr`; points are not
+          consulted.  2. an expr that is not drawable falls back to its stored
+          points.  3. neither → the note.  4. no string expr → exactly the path
+          this renderer always had; a NON-string expr is treated as absent.
+       Sampling is at U-5's constants, which are the Stage 0 sampler's own
+       (§16.10.11) — the one density at which this path and the fallback path
+       draw the SAME figure.
+       O-4 grouping: consecutive curves sharing one expr are ONE function, so a
+       run is sampled ONCE and its branches are drawn separately. Sampling per
+       stored curve would sample the function N times and draw it N times. */
+    var unplottable = 0, faultMissing = false;
+    var draw = [];                       // {pts, fig, col} — one per polyline
+    var gi = 0;
+    while (gi < curves.length) {
+      var gc = curves[gi] || {};
+      var gf = figures[gi] || {};
+      var gcol = SERIES_COLOURS[gi % SERIES_COLOURS.length];
+      var gex = typeof gc.expr === 'string' ? gc.expr : null;
 
-      /* A curve may be given as points OR as an expression. Every plot in the
-         corpus uses points; nothing here evaluates an expression, and pretending
-         otherwise would draw a wrong line. An expr curve is COUNTED and
-         reported under the figure rather than skipped in silence. */
-      var pts = Array.isArray(cur.points) ? cur.points : null;
-      if (!pts) { unplottable++; continue; }
+      if (gex === null) {                                        // rule 4
+        var gp = Array.isArray(gc.points) ? gc.points : null;
+        if (!gp) unplottable++; else draw.push({ pts: gp, fig: gf, col: gcol });
+        gi++;
+        continue;
+      }
+
+      var gj = gi + 1;                                           // the O-4 run
+      while (gj < curves.length && curves[gj] && curves[gj].expr === gex) gj++;
+
+      var X = EXPR();
+      if (!X) faultMissing = true;
+      var gr = X ? X.sampleFunction(gex, x0, x1, y0, y1) : null;
+
+      if (gr && !gr.error) {                                     // rule 1
+        for (var gb = 0; gb < gr.branches.length; gb++)
+          draw.push({ pts: gr.branches[gb], fig: gf, col: gcol });
+      } else {                                                   // rules 2-3
+        for (var gk = gi; gk < gj; gk++) {
+          var kc = curves[gk] || {};
+          var kp = Array.isArray(kc.points) ? kc.points : null;
+          if (!kp) unplottable++;
+          else draw.push({ pts: kp, fig: figures[gk] || {},
+                           col: SERIES_COLOURS[gk % SERIES_COLOURS.length] });
+        }
+      }
+      gi = gj;
+    }
+    if (faultMissing && typeof console !== 'undefined' && console.error)
+      console.error(MISSING_EVALUATOR);
+
+    for (var i = 0; i < draw.length; i++) {
+      var fig = draw[i].fig;
+      var mode = fig.mode || 'curve';
+      var col = draw[i].col;
+      var pts = draw[i].pts;
 
       var xy = [], j;
       for (j = 0; j < pts.length; j++) {
@@ -320,7 +387,12 @@
     svg += '</svg>';
 
     if (unplottable > 0) {
-      svg += note(unplottable === 1
+      /* C-3: when nothing could be drawn AND the evaluator is missing, this is
+         a deployment fault, NOT an undrawable expression — so it never borrows
+         rule 3's wording, and it carries data-fault so the two can never be
+         confused. When the evaluator IS present the note is unchanged. */
+      if (faultMissing) svg += note(MISSING_EVALUATOR, 'missing-evaluator');
+      else svg += note(unplottable === 1
         ? 'One curve in this graph is defined by a formula and is not drawn here.'
         : unplottable + ' curves in this graph are defined by formulas and are not drawn here.');
     }
