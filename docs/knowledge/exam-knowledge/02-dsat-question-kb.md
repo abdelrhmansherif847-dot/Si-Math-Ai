@@ -510,3 +510,131 @@ Three defects the manual audit caught, all fixed:
 
 *Prepared 2026-09-05; reviewed, hardened and first-ingested the same day.
 Generator frozen, taxonomy frozen, 103 reference records.*
+
+---
+
+## 17. Second ingestion: the polynomials corpus
+
+`Polynomial_Part_1.pdf`, 2026-09-05, sha256 `339cbbe7c9f0…bdbdf`, 55 pages,
+**two source blocks**, 77 records. The corpus is now 180.
+
+| | block A (S-003) | block B (S-004) |
+|---|---|---|
+| pages | 1–5, key on 6 | 7–55, one item per page |
+| questions | 28 | 49 |
+| provenance | `recalled_unofficial` / OBSERVED | `unknown` / UNKNOWN |
+| evidence | 28 per-question administration tags across 15 named administrations, August US 2023 → June US 2025 | none — a question-bank field layout is not attribution |
+| knowledge_use | REFERENCE | REFERENCE |
+| generation_eligibility | EXCLUDED | NOT_DIRECT_SOURCE |
+| answer key | printed on page 6 for all 28 | **none** |
+| difficulty | not printed | field printed, **value empty on all 49** |
+
+The structure is the twin of the pilot's, which is worth saying plainly: two
+compilations from different hands, bound into one PDF, with one block evidenced
+and one not. The D-3 block model was built for the first file and needed no
+change for the second.
+
+### The pipeline defect this file exposed
+
+**Four of the five D-1 provenance signals were dead code.** `provenanceScan`
+reads text; `ingest-dsat-pdf.mjs` passed it `text: ''`. The only test covering
+those signals handed the scanner the text it was checking for, so it passed
+while the caller supplied nothing — a green check that could not have gone red.
+
+The cost was concrete. Block A announces its own provenance 28 times, and the
+first run reported *no signals at all*.
+
+Three changes, each mutation-tested:
+
+1. **`contentText(buf)`** — a best-effort text probe, explicitly not an
+   extractor. It harvests the literal strings from page content streams and
+   keeps only runs that are already legible; a subset font with a shifted code
+   table yields bytes that are not text, and those are **dropped rather than
+   guessed at**. It returns `{streams, legible, ratio}`, and the pipeline prints
+   the ratio, so an under-read is visible instead of silent. On this file:
+   **6 of 55 streams legible**, which is exactly the six LaTeX pages.
+2. **`administration_tag` no longer requires whitespace.** PDF text loses the
+   inter-word spacing that lives in the kerning array, so a real tag arrives as
+   `[AugustUS2023]`. The `\s+` pattern matched none of the 28.
+3. **The show-text operator test was wrong.** `/\bTJ?\b/` matches neither `Tj`
+   nor `TJ` when a letter follows. Found by the new test's synthetic PDF, not by
+   either real file — and fixing it took the pilot file from 12 content streams
+   seen to 93.
+
+A caller-side assertion now reads the shipped pipeline and fails if it ever
+passes the empty string again.
+
+### What the source says about itself, kept apart from what it is
+
+Five `SOURCE_CONFLICT` rows, all open, none resolved:
+
+- **SRC-0001** — block B prints Domain *Advanced Math* and Skill *Equivalent
+  expressions* on all 49 pages. 8 items test exponent rules or radicals, 7
+  manipulate rational expressions, 3 are one- or two-step linear collections.
+- **SRC-0002** — 7 items say "the expression above" / "the polynomial above",
+  the pre-2024 paper layout in which a stimulus sat above the stem. The Digital
+  SAT wording is "the given expression". The metadata (`Assessment: SAT`) does
+  not separate the two tests, and the wording points the other way for part of
+  the block. **Provenance therefore stays `unknown`.**
+- **SRC-0003** — block A is headed *Polynomials*; item 2 is an exponential model
+  recovered from a three-row table.
+- **SRC-0004** — item 12's stem names three constants and the printed function
+  carries two. The parallel item on page 4 prints the third. **The item is not
+  repaired**: a silent correction would erase the evidence that this source can
+  drop a symbol.
+- **SRC-0005** — item 27's answer depends on a multiplicity the source never
+  states.
+
+20 of the 77 records carry `SOURCE_CONFLICT`, 8 `TOPIC_CLASSIFICATION_CONFLICT`,
+15 `KDG_MAPPING_CONFLICT`. `observed_topic` records the source's own words —
+`polynomials`, `equivalent_expressions` — and is not checked against anything.
+
+### What the duplicate detector found
+
+15 groups across the whole 180-record corpus, 7 of them new. Two are
+**cross-block**: the same construction appears in the administration-tagged
+block and in the unattributed one, with different numbers —
+
+- a trinomial with a symbolic constant term and a stated parameterised factor
+  (A item 6 ↔ B page 44),
+- "which expression is a factor", where three options are terms of the
+  expression (A item 11 ↔ B page 49).
+
+Five more are internal to block A: the intercept-truth construction twice, the
+point-evaluation twice, the conjugate-pair product twice, the factorability
+bound twice, and the smallest-factor cubic twice — the last pair sharing the
+*same quadratic* under a different monomial coefficient.
+
+**This is the finding, not a defect in the detector.** A set compiled from
+fifteen administrations repeats constructions because the administrations do.
+Items that were genuinely different did *not* group: three intercepts rather
+than two, a negated leading coefficient, a printed leading scalar — each kept
+its pair apart.
+
+### The manual audit
+
+All 16 block-A items whose answers can be re-derived independently were
+re-derived and checked against the printed key. **16 of 16 agree.** Four coding
+errors were found and fixed:
+
+1. **The symmetry in the shifted-square pair was stated backwards.** It is not
+   that the two asked inputs mirror each other; each asked input mirrors one
+   *supplied point* about the shift — so both values are already printed and no
+   constant is ever needed. The archetype claimed simultaneous equations that
+   nobody has to solve.
+2. One distractor was called a transposition when the option is a **root with
+   its sign flipped**.
+3. "Three options are terms of the expression" was true of two of them.
+4. A shared three-distractor fixture was papering over two items whose option
+   sets are individually informative. Both were re-coded from their printed
+   options and the shared fixture was deleted rather than left unused.
+
+### Standing state
+
+CI **84/84 green**. 4 sources, 180 questions, 41 archetypes, 13 conflicts
+(8 taxonomy + 5 source, all open). Longest string in `questions.json`: 171
+characters. `taxonomy.core.js`, the KDG, the generator, the EST system and every
+exam artifact are untouched; ESTM1's payload md5 is unchanged.
+
+*Second ingestion, 2026-09-05. Further parts of this set are expected and will
+join the same file and block model.*

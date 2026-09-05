@@ -104,3 +104,66 @@ export function provenanceScan({ buf, text = '', uris = null }) {
 
   return { sha256, signals, suggestedProvenance: suggested, hardExcluded, uris: foundUris };
 }
+
+// A best-effort text probe, NOT a text extractor.
+//
+// D-1 defines five provenance signals; four of them read text. The pipeline was
+// passing the empty string, so those four could never fire — dead code wearing a
+// passing test, because the only test hand-fed the text it was checking for.
+// The second PDF is where that cost something: it announces its own provenance
+// in per-question administration tags, and the scan reported no signals at all.
+//
+// A CORRECT extractor would resolve each content stream's fonts through the page
+// resource dictionary and decode with that font's ToUnicode CMap. That is a PDF
+// parser, and this repository is not getting one to read five regexes. So this
+// harvests the literal strings from content streams and keeps only the runs that
+// are ALREADY legible — a subset font with a shifted code table yields bytes
+// that are not text, and those runs are dropped rather than guessed at.
+//
+// Dropping them silently would be the same defect one layer down, so the return
+// value carries the counts: a caller that reads 5 of 55 streams must be able to
+// say so rather than report "no signals found".
+const PRINTABLE = /[\x20-\x7e\r\n\t]/g;
+const WORDY = /[A-Za-z]{3,}/g;
+const VOWEL = /[aeiouAEIOU]/;
+
+export function looksLikeText(run) {
+  if (run.length < 20) return false;
+  const printable = (run.match(PRINTABLE) || []).length / run.length;
+  if (printable < 0.85) return false;
+  // A shifted code table still yields letters; it does not yield English-shaped
+  // words. One vowel-carrying token is a weak test and is meant to be — it
+  // rejects consonant soup, and nothing here claims more than that.
+  return (run.match(WORDY) || []).some(w => VOWEL.test(w));
+}
+
+export function contentText(buf) {
+  const hay = buf.toString('latin1');
+  const re = /(?<![A-Za-z])stream(\r\n|\r|\n)?/g;
+  const runs = [];
+  let streams = 0, legible = 0, m;
+  while ((m = re.exec(hay)) !== null) {
+    const start = m.index + m[0].length;
+    const end = hay.indexOf('endstream', start);
+    if (end < 0) continue;
+    let stop = end;
+    while (stop > start && (hay[stop - 1] === '\n' || hay[stop - 1] === '\r')) stop--;
+    re.lastIndex = end + 9;
+    let s = null;
+    for (const fn of [inflateSync, inflateRawSync]) {
+      try { s = fn(buf.subarray(start, stop)).toString('latin1'); break; } catch { /* next */ }
+    }
+    if (s === null) continue;
+    // A page content stream draws text: it has BT and a show-text operator.
+    // BOTH cases matter — `TJ` shows a kerned array, `Tj` a single string — and
+    // /\bTJ?\b/ silently matches neither `Tj` nor `TJ` followed by a letter.
+    if (!/\bBT\b/.test(s) || !/\bT[Jj]\b/.test(s)) continue;
+    streams++;
+    const parts = [];
+    for (const lit of s.matchAll(/\((?:[^()\\]|\\[\\()nrtbf]|\\[0-7]{1,3})*\)/g))
+      parts.push(lit[0].slice(1, -1).replace(/\\([\\()])/g, '$1'));
+    const run = parts.join('');
+    if (looksLikeText(run)) { legible++; runs.push(run); }
+  }
+  return { text: runs.join('\n'), streams, legible, ratio: streams ? legible / streams : 0 };
+}

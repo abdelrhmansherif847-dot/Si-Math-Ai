@@ -80,7 +80,11 @@ export const GENERATION_ELIGIBILITY = [
 export const PROVENANCE_SIGNALS = [
   { id: 'telegram_channel', pattern: /t\.me\/|telegram/i, where: 'uri|text',
     means: 'distributed through a Telegram channel', suggests: 'recalled_unofficial' },
-  { id: 'administration_tag', pattern: /\[(January|March|April|May|June|August|October|November|December)(\s+US)?\s+20\d{2}\]/,
+  // Whitespace is OPTIONAL, not required. Text recovered from a PDF's content
+  // streams loses the inter-word spacing that lives in the kerning array, so a
+  // real tag arrives as "[AugustUS2023]". A pattern that insisted on \s+ matched
+  // nothing in the one file that carried 28 of these.
+  { id: 'administration_tag', pattern: /\[\s*(January|March|April|May|June|August|October|November|December)\s*(US)?\s*20\d{2}\s*\]/,
     where: 'text', means: 'questions attributed to named live administrations', suggests: 'recalled_unofficial' },
   { id: 'real_labelling', pattern: /\b(Real|Recalled|Actual)\s+(SAT|Test|Exam|Questions?)\b|\bReal\s*$/m,
     where: 'text', means: 'material labelled as real/recalled exam content', suggests: 'recalled_unofficial' },
@@ -246,6 +250,9 @@ export const OBSERVED_TOPICS = [
   'rational_exponents',
   'exponent_rules',
   'scientific_notation',
+  // seen in Polynomial_Part_1, 2026-09-05
+  'polynomials',            // block A section heading "Polynomials"
+  'equivalent_expressions', // block B Skill label, printed on all 49 pages
 ];
 
 // ── the copyright guard ──────────────────────────────────────────────────────

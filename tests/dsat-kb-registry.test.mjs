@@ -12,7 +12,8 @@
 import { gate } from '../scripts/dsat-kb/gate.mjs';
 import { insideRepo, assertCorpusOutsideRepo, REPO_ROOT } from '../scripts/dsat-kb/registry.mjs';
 import { HARD_EXCLUDED_SHA256, OBSERVED_TOPICS } from '../scripts/dsat-kb/schema.mjs';
-import { pageCount, provenanceScan, inflateAll } from '../scripts/dsat-kb/pdf.mjs';
+import { pageCount, provenanceScan, inflateAll, contentText, looksLikeText } from '../scripts/dsat-kb/pdf.mjs';
+import { deflateSync } from 'node:zlib';
 import { readFileSync, existsSync } from 'node:fs';
 import { SIMILARITY, SIMILARITY_THRESHOLDS, structuralFingerprint, mathematicalFingerprint, classifyPair }
   from '../scripts/dsat-kb/fingerprint.mjs';
@@ -268,6 +269,50 @@ console.log('\n── D-2: page counting survives compressed cross-reference str
   } else {
     ok(true, 'D-2 corpus file not present on this machine — page-count checks skipped');
   }
+}
+
+console.log('\n── D-1: the text signals are reachable from the pipeline, not just from a test ──');
+{
+  // The four text-reading signals passed for months while the pipeline handed
+  // provenanceScan the empty string: the only test that exercised them supplied
+  // the text itself. These assertions come at it from the caller's side.
+
+  // A synthetic PDF: one FlateDecode content stream that draws readable text,
+  // and one that draws a subset font's shifted code table (the shape that makes
+  // a naive harvest emit confident nonsense).
+  const mkPdf = (...bodies) => Buffer.concat(bodies.map(b =>
+    Buffer.concat([Buffer.from('4 0 obj<</Filter/FlateDecode>>stream\n'),
+                   deflateSync(Buffer.from(b, 'latin1')),
+                   Buffer.from('\nendstream endobj\n')])));
+
+  const readable = 'BT /F1 12 Tf (Polynomials1.[AugustUS2023]Whichexpressionisequivalentto) Tj ET';
+  const shifted  = 'BT /F2 12 Tf (\x004\x00X\x00H\x00V\x00W\x00L\x00R\x00Q\x00\x03\x00,\x00\x27) Tj ET';
+
+  const probe = contentText(mkPdf(readable, shifted));
+  ok(probe.streams === 2, `both content streams are seen (got ${probe.streams})`);
+  ok(probe.legible === 1, `only the legible one is kept (got ${probe.legible})`);
+  ok(/AugustUS2023/.test(probe.text), 'the readable run reaches the caller');
+  ok(!/\x00/.test(probe.text), 'the shifted run is dropped, not guessed at');
+  ok(probe.ratio < 1, 'and the under-read is reported rather than hidden');
+
+  ok(looksLikeText('Whichexpressionisequivalentto') === true, 'English-shaped text is accepted');
+  ok(looksLikeText('4XHVWLRQ\x00,\x00\x27\x00I\x00\x18\x00F\x00\x16\x00H') === false,
+     'a shifted code table is rejected');
+  ok(looksLikeText('qqq') === false, 'a run too short to judge is rejected');
+
+  // The tag as it actually arrives once a PDF's kerning has eaten the spaces.
+  const tagScan = provenanceScan({ buf: Buffer.from('x'), text: '1.[AugustUS2023]2.[May2024]' });
+  ok(tagScan.signals.some(x => x.id === 'administration_tag'),
+     'the administration tag fires WITHOUT inter-word spaces (the \\s+ pattern matched none of 28)');
+  ok(tagScan.suggestedProvenance === 'recalled_unofficial', 'and the file is classified from it');
+
+  // The caller-side check: nothing in the pipeline may hand the scanner an empty
+  // string again. This is the assertion that would have gone red before the fix.
+  const pipeline = readFileSync(new URL('../scripts/ingest-dsat-pdf.mjs', import.meta.url), 'utf8');
+  ok(/provenanceScan\(\{[^}]*text:\s*probe\.text/.test(pipeline),
+     'ingest-dsat-pdf.mjs passes the probe text to provenanceScan');
+  ok(!/provenanceScan\(\{[^}]*text:\s*''/.test(pipeline),
+     'and never passes the empty string, which made four of five signals dead code');
 }
 
 console.log('\n── an unknown construction is never grouped as a duplicate ──');

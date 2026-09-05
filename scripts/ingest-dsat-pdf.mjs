@@ -28,7 +28,7 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync, statSync } from 'no
 import { createHash } from 'node:crypto';
 import { basename, join } from 'node:path';
 import * as S from './dsat-kb/schema.mjs';
-import { pageCount, provenanceScan, extractUris } from './dsat-kb/pdf.mjs';
+import { pageCount, provenanceScan, extractUris, contentText } from './dsat-kb/pdf.mjs';
 import * as R from './dsat-kb/registry.mjs';
 
 const args = process.argv.slice(2);
@@ -81,7 +81,16 @@ if (S.provenanceNeedsEvidence(provenance) && !evidence.trim())
 // This CLASSIFIES. It does not discard: unofficial material is reference
 // knowledge, and refusing to read it would be the wrong kind of caution. The one
 // hard block is pinned by hash.
-const scan = provenanceScan({ buf, text: '', uris: extractUris(buf) });
+// The text probe is best-effort and says how much it could read. Passing '' here
+// — which this script did until the second PDF — leaves four of the five D-1
+// signals unable to fire, and a file that names its own administrations in
+// 28 places scans as carrying no signals at all.
+const probe = contentText(buf);
+console.log(`text probe   ${probe.legible}/${probe.streams} content streams legible` +
+  (probe.streams && probe.legible < probe.streams
+    ? ' — the rest use subset fonts this probe does not decode, so text signals are a FLOOR, not a count'
+    : ''));
+const scan = provenanceScan({ buf, text: probe.text, uris: extractUris(buf) });
 if (scan.hardExcluded) fail(`${scan.hardExcluded.what}: ${scan.hardExcluded.why}`);
 if (scan.signals.length) {
   console.log('\nprovenance signals read from the file itself:');
@@ -122,6 +131,9 @@ const manifest = {
   pages, text_layer: hasFont, image_only: !hasFont,
   declared_topic: topic ?? null,
   provenance, provenance_evidence: evidence || null,
+  text_probe: { streams: probe.streams, legible: probe.legible },
+  provenance_signals: scan.signals.map(s => s.id),
+  suggested_provenance: scan.suggestedProvenance,
   created: new Date().toISOString().slice(0, 10),
   // One row per page, to be filled in by the coding pass. Nothing is guessed.
   coding_worklist: Array.from({ length: pages ?? 0 }, (_, i) => ({
