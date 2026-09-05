@@ -14,12 +14,12 @@ import { suite } from './_assert.mjs';
 import { read } from './_source.mjs';
 
 const t = suite('exam-page');
-const PAGE = read('exam.html');
+const PAGE = read('assignments.html');
 
 const API = (() => {
   const a = PAGE.indexOf('const api = {');
   const b = PAGE.indexOf('\n};', a);
-  if (a < 0 || b < 0) throw new Error('exam.html: the api object could not be located');
+  if (a < 0 || b < 0) throw new Error('assignments.html: the api object could not be located');
   return PAGE.slice(a, b);
 })();
 

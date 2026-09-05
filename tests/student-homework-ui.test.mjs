@@ -9,7 +9,7 @@
 //      on teacher_homework_questions or teacher_homework_stimuli at all
 //      (H5 revoked both), and RLS answers 0 rows on the rest — so a direct
 //      read would fail silently rather than loudly, which is worse;
-//   2. it lets a homework result reach the analyzer. exam.html is the one page
+//   2. it lets a homework result reach the analyzer. assignments.html is the one page
 //      that loads ExamMistakesLogger, regenerateWeaknessReports and
 //      updateStreak, so the boundary is drawn INSIDE this file or nowhere;
 //   3. it reads can_open before attempt_status, and a student's own marked
@@ -27,7 +27,7 @@ import { read } from './_source.mjs';
 
 const t = suite('student-homework-ui');
 
-const PAGE = read('exam.html');
+const PAGE = read('assignments.html');
 const DASH = read('dashboard.html');
 
 /* The page's CODE, with its comments removed. Every structural claim below is
@@ -44,7 +44,7 @@ const DCODE = strip(DASH);
 
 /** A top-level function body, by its exact header line. Throws rather than
  *  returning an empty slice: a vacuous slice passes every check in it. */
-function fn(src, header, where = 'exam.html') {
+function fn(src, header, where = 'assignments.html') {
   const a = src.indexOf(header);
   if (a < 0) throw new Error(`${where}: ${header} not found`);
   const b = src.indexOf('\n}\n', a);
@@ -71,7 +71,7 @@ t.ok('the dashboard strip did the same',
 // ══ 1 · THE READ BOUNDARY ═════════════════════════════════════════════════
 t.section('Every homework read goes through an RPC, and no table is touched');
 
-/* The strongest available form, and it is exact: exam.html reaches the
+/* The strongest available form, and it is exact: assignments.html reaches the
    database through sb.rpc() and through nothing else at all. */
 t.is('the page never queries a table through the supabase client',
   (CODE.match(/\bsb\s*\.\s*from\(/g) || []).length, 0);
@@ -122,7 +122,7 @@ t.ok('the homework functions were located (not a vacuous slice)', HW_CODE.length
 t.ok('and they are the real ones', /rpc\('student_homework_submit'/.test(fn(CODE, 'const api = {').length ? CODE : '')
   && /hwSubmit\(S\.attempt\.attempt_id\)/.test(HW_CODE));
 
-/* The three writers of the learning profile. exam.html loads all three, so
+/* The three writers of the learning profile. assignments.html loads all three, so
    this file is the only place the boundary can be drawn. */
 t.is('no homework function reaches a writer of the learning profile',
   ['ExamMistakesLogger', 'regenerateWeaknessReports', 'updateStreak']
@@ -374,7 +374,7 @@ const CARD = (() => {
 t.ok('the card markup was located (not a vacuous slice)', CARD.length > 700);
 t.is('and there is one destination, not two',
   [...new Set([...CARD.matchAll(/(?:href|location\.href)\s*=\s*'?"?([a-z-]+\.html)/g)].map((m) => m[1]))],
-  ['exam.html']);
+  ['assignments.html']);
 /* A failure here must leave the dashboard exactly as it was — the card stays
    hidden rather than raising the page's error banner. */
 t.ok('it is loaded independently of the dashboard itself',

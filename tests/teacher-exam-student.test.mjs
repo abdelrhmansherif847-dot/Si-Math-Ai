@@ -15,7 +15,7 @@ import { suite } from './_assert.mjs';
 import { read } from './_source.mjs';
 
 const t = suite('teacher-exam-student');
-const PAGE = read('exam.html');
+const PAGE = read('assignments.html');
 
 // ══ 1 · THE ANSWER KEY ════════════════════════════════════════════════════
 t.section('The key stays on the server');
@@ -35,7 +35,7 @@ t.is('the page reads no teacher-exam table directly',
    everywhere else, and pinned so the exemption cannot go vacuous. */
 const HWREVIEW = (() => {
   const a = PAGE.indexOf('function hwReviewItem(it, keyVisible) {');
-  if (a < 0) throw new Error('exam.html: hwReviewItem() could not be located');
+  if (a < 0) throw new Error('assignments.html: hwReviewItem() could not be located');
   return PAGE.slice(a, PAGE.indexOf('\n}\n', a));
 })();
 t.ok('hwReviewItem() was located (not a vacuous slice)', HWREVIEW.length > 400);
@@ -51,7 +51,7 @@ t.section('A teacher-authored result is not learning evidence');
 
 const finishBody = (() => {
   const a = PAGE.indexOf('async function finish(res) {');
-  if (a < 0) throw new Error('exam.html: finish() could not be located');
+  if (a < 0) throw new Error('assignments.html: finish() could not be located');
   return PAGE.slice(a, PAGE.indexOf('\n}\n', a));
 })();
 t.ok('finish() was located (not a vacuous slice)', finishBody.length > 400);
