@@ -412,6 +412,42 @@
       "questions_found": 67,
       "shared_stimulus_pairs": 1,
       "file_sha256": "ce017ccd3687093dcbc23e7be19d26e9881f241696b11aa1da6027e97c32073a"
+    },
+    {
+      "source_id": "S-013",
+      "source_file": "fc618ab2-Trigonometry_24_Real_Questions.pdf",
+      "sha256": "a4b51a8252b2b37b0ae1a0b86bc398d8b2c0a15cd956afeb88c8f08bf8776084",
+      "md5": "e67b53fc0b4fdab4f69e9e8d65937a91",
+      "bytes": 266939,
+      "pages": 7,
+      "title": "Trigonometry (compiled extract, 24 items with a key)",
+      "declared_topic": null,
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "text_layer": true,
+      "image_only": false,
+      "corpus_dir": "/tmp/claude-0/-home-user-Si-Math-Ai/04b11b7c-9e5a-5d76-8bd0-64a172a5c12c/scratchpad/dsat-corpus/a4b51a8252b2",
+      "registered": "2026-09-05",
+      "questions_coded": 24,
+      "source_block": "A",
+      "block_label": "Trigonometry",
+      "page_from": 1,
+      "page_to": 6,
+      "questions": 24,
+      "answer_key_pages": [
+        7
+      ],
+      "answer_key_covers": "all 24 items; every one of them verified and correct",
+      "provenance_evidence": "24 administration tags over 17 named administrations; no Telegram annotation and no watermark, unlike every earlier file in this corpus",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "provenance_signals": [
+        "administration_tag"
+      ],
+      "same_compiler_as": "LAYOUT matches S-001 and S-006 through S-012 — same LaTeX two-column form and \"Answers: <topic>\" key page — but the two signals that identified them are ABSENT here",
+      "filename_claims": 24,
+      "questions_found": 24,
+      "file_sha256": "a4b51a8252b2b37b0ae1a0b86bc398d8b2c0a15cd956afeb88c8f08bf8776084"
     }
   ]
 }

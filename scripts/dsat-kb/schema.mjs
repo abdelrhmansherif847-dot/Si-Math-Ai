@@ -271,6 +271,8 @@ export const OBSERVED_TOPICS = [
   // seen in the percent/ratio corpus, 2026-09-05. The heading names two of the
   // three things the file tests; one item is a radical, and belongs to neither.
   'percent_ratio_proportion',
+  // seen in the trigonometry corpus, 2026-09-05
+  'trigonometry',
 ];
 
 // ── the copyright guard ──────────────────────────────────────────────────────

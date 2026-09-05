@@ -320,6 +320,17 @@
       "statement_b": "it holds 67 numbered items, its key covers all 67, and one of them is a radical-to-exponent item",
       "why": "the count is one short of the document and of its own key. Item 23 asks for the exponent form of a square root and belongs to neither named topic",
       "resolution": "NONE. All 67 are coded; item 23 is filed on Exponential Functions where the exponents pilot filed its radicals, which raises the record-level conflicts that mapping already carries."
+    },
+    {
+      "conflict_id": "TAX-0012",
+      "kind": "TAXONOMY_CONFLICT",
+      "opened": "2026-09-05",
+      "status": "open",
+      "about": "exam topic \"Trigonometry\", which artifact 01 lists for ST1 and NOT for the DSAT",
+      "statement_a": "DSAT_TOPICS has 22 entries and no Trigonometry; ST1_TOPICS has 25 and does",
+      "statement_b": "S-013 is 24 items headed Trigonometry, every one tagged to a named DSAT administration",
+      "why": "the DSAT list folds trigonometry into Triangles, which is why that row alone carries GEO_005 and N-TRIG. The omission is a modelling choice, not a claim that the DSAT does not test it",
+      "resolution": "NONE, and none needed in the data: the 24 are filed under Triangles with GEO_005 and N-TRIG, which raises no record-level conflict. Recorded so the next DSAT trigonometry file does not repeat the investigation."
     }
   ]
 }

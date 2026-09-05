@@ -1585,3 +1585,118 @@ guard has fired on my writing and been obeyed rather than loosened.
 artifact are untouched.
 
 *Ninth ingestion, 2026-09-05.*
+
+---
+
+## 26. Tenth ingestion: the trigonometry corpus
+
+`fc618ab2-Trigonometry_24_Real_Questions.pdf` — sha256 `a4b51a8252b2…`,
+266,939 bytes, **7 pages**. One block: 24 items on pages 1–6, an answer key on
+page 7 covering all 24. Registered as **S-013**. The smallest file in the
+programme, and the only one where every printed answer is both checkable and
+correct.
+
+### 24 of 24
+
+Every item was derived independently. **All 24 agree with the printed key**, and
+the nine that depend on which side of a figure is which were settled by
+rendering the pages rather than by inferring from the key. Three of those are
+confirmed by exact Pythagorean identities the compiler chose deliberately:
+79² − 157 = 78², 53² − 105 = 52², and 24² − 12² gives exactly √3⁄2.
+
+The filename is also exactly right — 24 for 24. Second time in ten files.
+
+One nuance rather than an error: items 2 and 21 bound the run with a strict
+inequality and item 3 with a non-strict one, so item 3's exact product 338.4 is
+admissible where the other two have no least real value. The key rounds up to
+the next integer in all three, which is forced for the strict pair and a
+convention for item 3.
+
+### The provenance signals are gone, and the layout is not
+
+Every earlier file from this compiler carried a Telegram annotation and a handle
+watermark. **This one carries neither.** Its only provenance signal is the 24
+administration tags.
+
+What it does carry is the same LaTeX two-column form and the same
+`Answers: <topic>` key page. That is a layout match, not a signal match, and the
+source row says so rather than asserting the same compiler.
+
+### "Trigonometry" is not a DSAT topic
+
+The validator refused all 24 records, and it was right. Artifact 01 lists **22**
+DSAT topics and **25** for ST1; Trigonometry, Asymptote and Word Problems /
+Mixed are on the ST1 list only.
+
+These 24 items come from named DSAT administrations. The resolution was in the
+data already: the DSAT list **folds trigonometry into Triangles**, which is why
+that row alone carries subtopic `GEO_005` and node `N-TRIG`. Filed there, all 24
+raise no record-level conflict at all. Registered as **TAX-0012** so the next
+DSAT trigonometry file does not repeat the investigation.
+
+### One construction, two archetype names — and a cross-file duplicate underneath
+
+The trigonometry corpus supplies a precise archetype for a construction the
+triangles corpus had filed under a generic one. Two triangles records had
+**identical mathematical fingerprints** to trigonometry items while carrying a
+different archetype name, which is how it was found.
+
+Both were re-pointed after checking the option sets, not merely to make them
+match. What surfaced when they were:
+
+```
+DG-0065  duplicate_or_renumbered  n=3  A-TRIG-COMPLEMENT-VALUE
+    Q-009-p4-q13   Triangles_143…
+    Q-013-p2-q7    Trigonometry_24…
+    Q-013-p5-q19   Trigonometry_24…
+```
+
+**A cross-file duplicate between two different topic compilations** — the third
+cross-file group in the corpus and the first that is not the polynomials
+part-1/part-2 pair. It was invisible while one construction wore two names.
+
+That is the concrete cost of the limitation §25 measured. The relation was
+`same_construction_different_shape` at 0.882, which `groupDuplicates` never
+places; only correcting the archetype turned it into a group.
+
+### What 24 items were worth
+
+**14 constructions.** Seven of the 24 turn on one identity — the sine of an
+angle is the cosine of its complement — and **three of those print side lengths
+that are never used at all.** Item 1's answer is zero for every such triangle;
+items 9 and 14 are answered by naming a function. The numbers are there to make
+the item look like arithmetic.
+
+`nonobvious_relationship` is load-bearing on **12 of 24** — half the file, and
+the highest share of any corpus here — and in this material it means one thing: **the
+work has already been done by the identity, if you see it.**
+
+### Repetition, across eight sets from one compiler
+
+| ingestion | records in a duplicate group |
+|---|---|
+| polynomials, block A | 43% |
+| linear systems | 48% |
+| circles | 60% |
+| areas & volumes | 51% |
+| triangles | 38% |
+| statistics | 37% |
+| percent & ratio | 43% |
+| trigonometry | **54%** |
+
+37%–60% over eight sets. On 24 items a single pair moves the figure four points,
+so this one is the least stable of the eight.
+
+### Standing state
+
+CI **84/84 green** · 13 sources, 721 questions, 219 archetypes, 30 conflicts
+(**12** taxonomy + 18 source, all open) · 107 duplicate groups, **3 of them
+cross-file**. One validator catch was a real modelling question (the DSAT topic
+list) and the others were the prose guard on notes of my own — including one
+that taught a rule worth keeping: **`observed_notes` records what the source
+shows, not how this repository has coded it.** A note about re-pointing an
+archetype does not belong in a field about the document.
+`taxonomy.core.js`, the KDG, the generator, the EST system and every exam
+artifact are untouched.
+
+*Tenth ingestion, 2026-09-05.*
