@@ -1,0 +1,232 @@
+// The DSAT Question Knowledge Base — canonical schema.
+//
+// This is the vocabulary every ingested question record is written in, and the
+// only place these enumerations are defined. It imports the frozen taxonomy and
+// the KDG node list rather than restating them, so "invalid topic" and "invalid
+// KDG node" are checks against the real thing and cannot drift.
+//
+// THREE RULES THIS FILE ENFORCES BY ITS SHAPE
+//
+// 1. No question text lives in a record. The repository is public and the
+//    sources are copyrighted. A record holds identifiers, fingerprints and
+//    metadata; the text stays in the corpus outside the repository. FORBIDDEN_
+//    TEXT_FIELDS and looksLikeSourceText() make that mechanical.
+//
+// 2. Provenance is never silently upgraded. `official_college_board` and
+//    `real_released_practice` require written evidence; the default is
+//    `unknown`, and unknown is a legitimate resting state.
+//
+// 3. Steps are not a reasoning mechanism. Step count is a time-budget
+//    descriptor and lives in its own field. A mechanism is load-bearing only
+//    with a counterfactual saying what changes when it is removed.
+
+import TAX from '../../taxonomy.core.js';
+import { KDG_NODES, DSAT_TOPICS, ST1_TOPICS, REPRESENTATIONS as KDG_REPS }
+  from '../../docs/knowledge/exam-knowledge/exam-structure-and-kdg.mjs';
+
+export const SCHEMA_VERSION = 1;
+
+// ── the two canonical vocabularies this KB binds to, both read-only ──────────
+export const TAXONOMY_TOPICS = TAX.TOPICS.map(t => t.id);
+export const TAXONOMY_SUBTOPICS = TAX.SUBTOPICS.map(s => s.id);
+export const TAXONOMY_SUBTOPIC_NAME = Object.fromEntries(TAX.SUBTOPICS.map(s => [s.id, s.displayName]));
+export const KDG_NODE_IDS = KDG_NODES.map(n => n.id);
+export const KDG_NODE_NAME = Object.fromEntries(KDG_NODES.map(n => [n.id, n.name]));
+export const EXAM_TOPICS = {
+  DSAT: DSAT_TOPICS.map(r => r.topic),
+  ST1: ST1_TOPICS.map(r => r.topic),
+};
+
+// ── provenance ───────────────────────────────────────────────────────────────
+// Ordered weakest to strongest. `rank` exists so an upgrade is detectable.
+export const PROVENANCE = [
+  { id: 'unknown', rank: 0, needsEvidence: false, label: 'Unknown' },
+  { id: 'third_party', rank: 1, needsEvidence: false, label: 'Third-party' },
+  { id: 'project_authored', rank: 1, needsEvidence: false, label: 'Project-authored' },
+  { id: 'real_released_practice', rank: 2, needsEvidence: true, label: 'Real released / practice DSAT' },
+  { id: 'official_college_board', rank: 3, needsEvidence: true, label: 'Official College Board / official DSAT' },
+];
+export const PROVENANCE_IDS = PROVENANCE.map(p => p.id);
+export const provenanceRank = id => PROVENANCE.find(p => p.id === id)?.rank ?? -1;
+export const provenanceNeedsEvidence = id => !!PROVENANCE.find(p => p.id === id)?.needsEvidence;
+
+// Sources the project has ruled out permanently. A record naming one of these
+// is a hard failure, not a provenance grade.
+export const EXCLUDED_SOURCES = [
+  { pattern: /leaked/i, why: 'leaked material is excluded from the corpus permanently' },
+  { pattern: /elitex|bluebook.?leak/i, why: 'the leaked March 2026 file is excluded permanently' },
+  { pattern: /recalled.?(live|exam)/i, why: 'recalled live exams are not permitted reference material' },
+];
+
+// ── confidence ───────────────────────────────────────────────────────────────
+// SOURCE-STATED  the source says it
+// OBSERVED       read off the item itself without judgement (option count, figure present)
+// INFERRED       this ingestion's judgement about the item
+// UNKNOWN        not determinable — a legitimate answer, never a gap to fill
+export const CONFIDENCE = ['SOURCE-STATED', 'OBSERVED', 'INFERRED', 'UNKNOWN'];
+
+// ── representation ───────────────────────────────────────────────────────────
+export const REPRESENTATIONS = [
+  'symbolic_algebraic', 'verbal', 'table', 'graph', 'coordinate_plane',
+  'geometry_figure', 'scatter_plot', 'number_line', 'function_representation',
+  'mixed_representation', 'other',
+];
+// The five forms S-KDG names, kept as a separate axis: those are the graph's
+// vocabulary, these are the item's. They are related but not the same list.
+export const KDG_REPRESENTATION_IDS = KDG_REPS.map(r => r.id);
+
+export const TARGET_TYPES = [
+  'value', 'expression', 'equation', 'relationship', 'interpretation',
+  'count', 'parameter', 'interval', 'statement_truth', 'other',
+];
+
+export const ANSWER_STRUCTURES = [
+  'mcq_4', 'mcq_5', 'student_produced_response', 'other',
+];
+
+export const STIMULUS_TYPES = [
+  'none', 'table', 'graph', 'scatter_plot', 'geometry_figure', 'number_line',
+  'passage', 'equation_set', 'diagram', 'other',
+];
+
+// ── reasoning mechanisms ─────────────────────────────────────────────────────
+// The ten of the brief, plus trap cost. `steps` is deliberately ABSENT: step
+// count is a time-budget descriptor and lives in `step_count`.
+export const REASONING_MECHANISMS = [
+  { id: 'hidden_step', label: 'A required step the stem does not signal.' },
+  { id: 'inference', label: 'A fact must be derived before the stated task can start.' },
+  { id: 'multiconcept', label: 'Two or more distinct concepts are jointly required.' },
+  { id: 'nonobvious_relationship', label: 'The relationship linking given to asked is not surface-visible.' },
+  { id: 'representation_switch', label: 'The solver must move between representations.' },
+  { id: 'abstraction', label: 'A concrete situation must be handled in general form.' },
+  { id: 'reversal', label: 'The obvious solving direction must be run backwards.' },
+  { id: 'filtering', label: 'Given information must be selected from or discarded.' },
+  { id: 'competing_interpretations', label: 'More than one reading of the stem is defensible.' },
+  { id: 'option_testing', label: 'The options are part of the route, not just the answer.' },
+  { id: 'trap_cost', label: 'A wrong route is cheaper than the right one and lands on a printed option.' },
+];
+export const MECHANISM_IDS = REASONING_MECHANISMS.map(m => m.id);
+// Never a mechanism. Named so the mistake fails loudly rather than passing.
+export const NOT_MECHANISMS = ['steps', 'step_count', 'arithmetic_length', 'long', 'many_steps'];
+
+// ── distractor taxonomy ──────────────────────────────────────────────────────
+export const DISTRACTOR_CATEGORIES = [
+  'arithmetic_slip', 'sign_error', 'wrong_equation_setup', 'wrong_interpretation',
+  'wrong_representation', 'incomplete_reasoning', 'reversal_error',
+  'omitted_condition', 'wrong_endpoint', 'wrong_statistical_operation',
+  'plausible_competing_interpretation', 'common_misconception', 'weak_random',
+  'unknown',
+];
+
+// ── difficulty ───────────────────────────────────────────────────────────────
+export const DIFFICULTY_EVIDENCE_KINDS = ['SOURCE-STATED', 'OBSERVED', 'INFERRED', 'UNKNOWN'];
+export const DIFFICULTY_BANDS = ['easy', 'medium', 'hard', 'unknown'];
+
+// ── conflicts ────────────────────────────────────────────────────────────────
+export const CONFLICT_KINDS = [
+  'TAXONOMY_CONFLICT', 'SOURCE_CONFLICT', 'TOPIC_CLASSIFICATION_CONFLICT',
+  'KDG_MAPPING_CONFLICT', 'AMBIGUOUS_ARCHETYPE', 'AMBIGUOUS_DIFFICULTY',
+  'DUPLICATE_AMBIGUITY', 'REPRESENTATION_AMBIGUITY',
+];
+
+// ── exam topic → frozen taxonomy subtopic ────────────────────────────────────
+// TWO AXES, ON PURPOSE. The brief requires the dedicated topics stay distinct
+// AND that taxonomy.core.js stays frozen and unsplit. Both hold, because a
+// record carries an exam topic and a taxonomy subtopic separately.
+//
+// `conflict: true` marks a row where the exam axis is finer than the frozen
+// taxonomy. Those rows are pre-registered in the conflict register: they are
+// known, permanent, and must never be "fixed" by editing the taxonomy.
+export const EXAM_TOPIC_TAXONOMY = [
+  { topic: 'Data Analysis (Basics)', subtopics: ['STA_005'] },
+  { topic: 'Graphs (Data)', subtopics: ['STA_005', 'STA_001'], conflict: true,
+    why: 'S-EXAM makes Graphs a dedicated topic; the frozen taxonomy has no Graphs subtopic' },
+  { topic: 'Tables (Data)', subtopics: ['STA_005'], conflict: true,
+    why: 'S-EXAM makes Tables a dedicated topic; the frozen taxonomy has no Tables subtopic' },
+  { topic: 'Mean', subtopics: ['STA_002'], conflict: true,
+    why: 'three dedicated exam topics share one frozen subtopic, "Mean, Median & Mode"' },
+  { topic: 'Median', subtopics: ['STA_002'], conflict: true,
+    why: 'three dedicated exam topics share one frozen subtopic, "Mean, Median & Mode"' },
+  { topic: 'Mode', subtopics: ['STA_002'], conflict: true,
+    why: 'three dedicated exam topics share one frozen subtopic, "Mean, Median & Mode"' },
+  { topic: 'Interquartile Range', subtopics: ['STA_003'], conflict: true,
+    why: 'IQR is a dedicated exam topic; the frozen taxonomy has only "Range & Interval"' },
+  { topic: 'Probability', subtopics: ['PR_001', 'PR_002'] },
+  { topic: 'Ratios, Rates, Percent', subtopics: ['PR_003', 'PR_004', 'PR_005'] },
+  { topic: 'Units and Rates', subtopics: ['PR_005', 'PR_004'] },
+  { topic: 'Linear Equations', subtopics: ['ALG_006'] },
+  { topic: 'Linear Inequalities', subtopics: ['ALG_008'] },
+  { topic: 'Linear Functions', subtopics: ['ALG_006', 'FUN_001'] },
+  { topic: 'Systems of Equations', subtopics: ['ALG_007'] },
+  { topic: 'Polynomials', subtopics: ['ALG_004'] },
+  { topic: 'Quadratic Equations', subtopics: ['ALG_010'] },
+  { topic: 'Exponential Functions', subtopics: ['ALG_011'] },
+  { topic: 'Absolute Value', subtopics: ['ALG_009'] },
+  { topic: 'Geometry (Lines & Angles)', subtopics: ['GEO_001'] },
+  { topic: 'Triangles', subtopics: ['GEO_002', 'GEO_004', 'GEO_005'] },
+  { topic: 'Polygons', subtopics: ['GEO_003'] },
+  { topic: 'Circle', subtopics: ['GEO_006', 'GEO_008'] },
+  { topic: 'Trigonometry', subtopics: ['GEO_005'] },
+  { topic: 'Asymptote', subtopics: ['ALG_011'], conflict: true,
+    why: 'Asymptote is a dedicated exam topic with NO counterpart subtopic; it lands on Exponential Functions' },
+  { topic: 'Word Problems / Mixed', subtopics: [], conflict: true,
+    why: 'a cross-topic skill used as an exam topic; it has no single taxonomy home' },
+];
+
+// ── exam topic → KDG node, from artifact 01 §11 ──────────────────────────────
+// Re-exported here so a record's KDG mapping can be checked against the same
+// alignment the ingestion published, rather than a second private copy.
+export { TOPIC_NODE_MAP } from '../../docs/knowledge/exam-knowledge/exam-structure-and-kdg.mjs';
+
+// ── the copyright guard ──────────────────────────────────────────────────────
+// A record must never carry question text. These field names are refused
+// outright; looksLikeSourceText() catches prose smuggled into a field that is
+// allowed to hold a short label.
+export const FORBIDDEN_TEXT_FIELDS = [
+  'stem', 'stem_text', 'question_text', 'text', 'body', 'prompt', 'passage',
+  'options', 'choices', 'option_text', 'answer_text', 'explanation',
+  'solution', 'solution_text', 'rationale_text', 'full_text', 'raw', 'ocr',
+  'transcript', 'content',
+];
+
+// Short structured labels are fine; sentences of source prose are not. The test
+// is deliberately blunt — it is a guard, not a classifier, and it is better for
+// it to complain about a long note than to let a stem through.
+export const TEXT_HEURISTIC = { maxWords: 25, maxChars: 200 };
+export function looksLikeSourceText(value) {
+  if (typeof value !== 'string') return false;
+  const words = value.trim().split(/\s+/).length;
+  if (value.length > TEXT_HEURISTIC.maxChars || words > TEXT_HEURISTIC.maxWords) return true;
+  // A stem usually ends in a question mark or contains a mathematical sentence
+  // next to an instruction verb.
+  return /\?\s*$/.test(value.trim()) && words > 8;
+}
+
+// ── the question record ──────────────────────────────────────────────────────
+// `required` fields must be present on every record. Everything else may be
+// absent, but if present must validate.
+export const QUESTION_RECORD_FIELDS = {
+  required: [
+    'question_id', 'source_id', 'source_file', 'source_page', 'provenance',
+    'provenance_confidence', 'exam', 'topic', 'taxonomy_subtopics',
+    'knowledge_nodes', 'representation', 'target_type', 'archetype',
+    'archetype_confidence', 'reasoning_mechanisms', 'distractor_logic',
+    'difficulty_evidence', 'difficulty_confidence', 'answer_structure',
+    'stimulus_type', 'structural_fingerprint', 'mathematical_fingerprint',
+  ],
+  optional: [
+    'source_question_number', 'mathematical_signature', 'provenance_evidence', 'subtopic_note', 'secondary_knowledge_nodes',
+    'prerequisite_nodes', 'kdg_confidence', 'representation_transition',
+    'step_count', 'stimulus_id', 'duplicate_group', 'near_duplicate_group',
+    'fingerprint_components', 'source_notes', 'observed_notes',
+    'inference_notes', 'unknown_notes', 'conflicts', 'ingested_on',
+  ],
+};
+
+export const EXAMS = ['DSAT', 'ST1'];
+
+// A question id is stable and carries its source: DSAT-<source>-<page>-<n>.
+export const QUESTION_ID_RE = /^Q-[A-Z0-9]{2,12}-p\d{1,4}-q\d{1,3}$/;
+export const SOURCE_ID_RE = /^S-[A-Z0-9]{2,12}$/;
+export const ARCHETYPE_ID_RE = /^A-[A-Z0-9-]{3,40}$/;
+export const FINGERPRINT_RE = /^[0-9a-f]{16}$/;

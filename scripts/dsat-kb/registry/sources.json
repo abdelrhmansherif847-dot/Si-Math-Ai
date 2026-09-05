@@ -1,0 +1,5 @@
+{
+  "schema_version": 1,
+  "note": "One row per ingested PDF. Question text is NOT here — see CORPUS_ROOT.",
+  "sources": []
+}

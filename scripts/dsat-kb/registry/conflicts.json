@@ -1,0 +1,94 @@
+{
+  "schema_version": 1,
+  "note": "Nothing here is closed by editing one side to agree with the other. Conflicts are recorded and traceable.",
+  "conflicts": [
+    {
+      "conflict_id": "TAX-0001",
+      "kind": "TAXONOMY_CONFLICT",
+      "opened": "2026-09-05",
+      "status": "open",
+      "about": "exam topic \"Graphs (Data)\" against the frozen taxonomy",
+      "statement_a": "S-EXAM makes \"Graphs (Data)\" a dedicated topic (artifact 01, EK-TOPIC-01)",
+      "statement_b": "taxonomy.core.js maps it to STA_005 \"Data Analysis\" + STA_001 \"Scatter Plots\"",
+      "why": "S-EXAM makes Graphs a dedicated topic; the frozen taxonomy has no Graphs subtopic",
+      "resolution": "NONE. taxonomy.core.js is frozen (CLAUDE.md §2). A record carries both axes; neither is edited to agree with the other."
+    },
+    {
+      "conflict_id": "TAX-0002",
+      "kind": "TAXONOMY_CONFLICT",
+      "opened": "2026-09-05",
+      "status": "open",
+      "about": "exam topic \"Tables (Data)\" against the frozen taxonomy",
+      "statement_a": "S-EXAM makes \"Tables (Data)\" a dedicated topic (artifact 01, EK-TOPIC-01)",
+      "statement_b": "taxonomy.core.js maps it to STA_005 \"Data Analysis\"",
+      "why": "S-EXAM makes Tables a dedicated topic; the frozen taxonomy has no Tables subtopic",
+      "resolution": "NONE. taxonomy.core.js is frozen (CLAUDE.md §2). A record carries both axes; neither is edited to agree with the other."
+    },
+    {
+      "conflict_id": "TAX-0003",
+      "kind": "TAXONOMY_CONFLICT",
+      "opened": "2026-09-05",
+      "status": "open",
+      "about": "exam topic \"Mean\" against the frozen taxonomy",
+      "statement_a": "S-EXAM makes \"Mean\" a dedicated topic (artifact 01, EK-TOPIC-01)",
+      "statement_b": "taxonomy.core.js maps it to STA_002 \"Mean, Median & Mode\"",
+      "why": "three dedicated exam topics share one frozen subtopic, \"Mean, Median & Mode\"",
+      "resolution": "NONE. taxonomy.core.js is frozen (CLAUDE.md §2). A record carries both axes; neither is edited to agree with the other."
+    },
+    {
+      "conflict_id": "TAX-0004",
+      "kind": "TAXONOMY_CONFLICT",
+      "opened": "2026-09-05",
+      "status": "open",
+      "about": "exam topic \"Median\" against the frozen taxonomy",
+      "statement_a": "S-EXAM makes \"Median\" a dedicated topic (artifact 01, EK-TOPIC-01)",
+      "statement_b": "taxonomy.core.js maps it to STA_002 \"Mean, Median & Mode\"",
+      "why": "three dedicated exam topics share one frozen subtopic, \"Mean, Median & Mode\"",
+      "resolution": "NONE. taxonomy.core.js is frozen (CLAUDE.md §2). A record carries both axes; neither is edited to agree with the other."
+    },
+    {
+      "conflict_id": "TAX-0005",
+      "kind": "TAXONOMY_CONFLICT",
+      "opened": "2026-09-05",
+      "status": "open",
+      "about": "exam topic \"Mode\" against the frozen taxonomy",
+      "statement_a": "S-EXAM makes \"Mode\" a dedicated topic (artifact 01, EK-TOPIC-01)",
+      "statement_b": "taxonomy.core.js maps it to STA_002 \"Mean, Median & Mode\"",
+      "why": "three dedicated exam topics share one frozen subtopic, \"Mean, Median & Mode\"",
+      "resolution": "NONE. taxonomy.core.js is frozen (CLAUDE.md §2). A record carries both axes; neither is edited to agree with the other."
+    },
+    {
+      "conflict_id": "TAX-0006",
+      "kind": "TAXONOMY_CONFLICT",
+      "opened": "2026-09-05",
+      "status": "open",
+      "about": "exam topic \"Interquartile Range\" against the frozen taxonomy",
+      "statement_a": "S-EXAM makes \"Interquartile Range\" a dedicated topic (artifact 01, EK-TOPIC-01)",
+      "statement_b": "taxonomy.core.js maps it to STA_003 \"Range & Interval\"",
+      "why": "IQR is a dedicated exam topic; the frozen taxonomy has only \"Range & Interval\"",
+      "resolution": "NONE. taxonomy.core.js is frozen (CLAUDE.md §2). A record carries both axes; neither is edited to agree with the other."
+    },
+    {
+      "conflict_id": "TAX-0007",
+      "kind": "TAXONOMY_CONFLICT",
+      "opened": "2026-09-05",
+      "status": "open",
+      "about": "exam topic \"Asymptote\" against the frozen taxonomy",
+      "statement_a": "S-EXAM makes \"Asymptote\" a dedicated topic (artifact 01, EK-TOPIC-01)",
+      "statement_b": "taxonomy.core.js maps it to ALG_011 \"Exponential Functions\"",
+      "why": "Asymptote is a dedicated exam topic with NO counterpart subtopic; it lands on Exponential Functions",
+      "resolution": "NONE. taxonomy.core.js is frozen (CLAUDE.md §2). A record carries both axes; neither is edited to agree with the other."
+    },
+    {
+      "conflict_id": "TAX-0008",
+      "kind": "TAXONOMY_CONFLICT",
+      "opened": "2026-09-05",
+      "status": "open",
+      "about": "exam topic \"Word Problems / Mixed\" against the frozen taxonomy",
+      "statement_a": "S-EXAM makes \"Word Problems / Mixed\" a dedicated topic (artifact 01, EK-TOPIC-01)",
+      "statement_b": "taxonomy.core.js has no subtopic for it at all",
+      "why": "a cross-topic skill used as an exam topic; it has no single taxonomy home",
+      "resolution": "NONE. taxonomy.core.js is frozen (CLAUDE.md §2). A record carries both axes; neither is edited to agree with the other."
+    }
+  ]
+}

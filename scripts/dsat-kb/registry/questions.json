@@ -1,0 +1,5 @@
+{
+  "schema_version": 1,
+  "note": "Coded question records. No question text, ever. See scripts/dsat-kb/schema.mjs.",
+  "questions": []
+}
