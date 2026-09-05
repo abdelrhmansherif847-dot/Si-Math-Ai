@@ -227,6 +227,45 @@
       "filename_claims": 50,
       "questions_found": 47,
       "file_sha256": "0f40d5e89f34a282a5a108287c3d39796870983a9da718e824324cab2fbb910e"
+    },
+    {
+      "source_id": "S-008",
+      "source_file": "e24721bd-Solid_Geomtry_71_Real_Question.pdf",
+      "sha256": "18c7134f010d24acf77b23d9d9bc89b179befee4652c5fc6d74188389b706b50",
+      "md5": "19cd3cadcd715d67ab2e2e14133cff39",
+      "bytes": 285128,
+      "pages": 20,
+      "title": "Areas & Volumes / Solid Geometry (compiled extract, 72 items with an answer key)",
+      "declared_topic": null,
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "72 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a per-page handle watermark",
+      "text_layer": true,
+      "image_only": false,
+      "corpus_dir": "/tmp/claude-0/-home-user-Si-Math-Ai/04b11b7c-9e5a-5d76-8bd0-64a172a5c12c/scratchpad/dsat-corpus/18c7134f010d",
+      "registered": "2026-09-05",
+      "questions_coded": 72,
+      "source_block": "A",
+      "block_label": "Areas&Volumes",
+      "page_from": 1,
+      "page_to": 18,
+      "questions": 72,
+      "answer_key_pages": [
+        19,
+        20
+      ],
+      "answer_key_covers": "its own 72 items, by item number",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "provenance_signals": [
+        "telegram_channel",
+        "administration_tag",
+        "social_handle"
+      ],
+      "same_compiler_as": "S-001, S-006 and S-007 — same Telegram channel and watermark",
+      "filename_claims": 71,
+      "questions_found": 72,
+      "file_sha256": "18c7134f010d24acf77b23d9d9bc89b179befee4652c5fc6d74188389b706b50"
     }
   ]
 }

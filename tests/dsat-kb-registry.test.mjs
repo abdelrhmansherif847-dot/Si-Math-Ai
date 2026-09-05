@@ -238,6 +238,30 @@ console.log('\n── the observed vocabulary stays disjoint from the canonical 
     'and the frozen taxonomy is still 33 subtopics — observed topics create no taxonomy nodes');
 }
 
+console.log('\n── a ninth taxonomy conflict is recordable; a closed one is still caught ──');
+{
+  // The count form of this gate could not tell "each flagged row has an open
+  // conflict" from "eight taxonomy conflicts exist". The solid-geometry corpus
+  // needed a NINTH, of a different origin: the exam axis has no Solid Geometry
+  // row at all, where the eight are the axis being finer than the taxonomy.
+  const ninth = { conflict_id: 'TAX-9999', kind: 'TAXONOMY_CONFLICT', status: 'open',
+    about: 'the exam axis has no row for a taxonomy subtopic', statement_a: 'a', statement_b: 'b' };
+  const c = codes(gate(clean({ conflicts: [...CONFLICTS, ninth] })));
+  ok(!c.includes('CONF-TAX-COUNT'),
+     'a ninth taxonomy conflict of a different origin does not trip the gate');
+
+  const closed = CONFLICTS.map(x => x.about.includes('"Mean"')
+    ? { ...x, status: 'resolved', resolved_by: 'x', resolved_on: '2026-09-05' } : x);
+  const c2 = codes(gate(clean({ conflicts: closed })));
+  ok(c2.includes('CONF-TAX-COUNT'), 'closing one of the eight still fires  [CONF-TAX-COUNT]');
+  ok(c2.includes('CONF-REQUIRED-MISSING'), 'and the named check fires too  [CONF-REQUIRED-MISSING]');
+
+  // …and adding a ninth must not paper over a missing one.
+  const c3 = codes(gate(clean({ conflicts: [...closed, ninth] })));
+  ok(c3.includes('CONF-TAX-COUNT'),
+     'a ninth cannot substitute for one of the eight');
+}
+
 console.log('\n── the copyright boundary on the raw stores ──');
 fires('TEXT-LONG-STRING', { raw: { 'questions.json': `{"note":"${'x'.repeat(250)}"}` } },
   'a long string in a store is rejected as possible question text');

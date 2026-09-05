@@ -188,6 +188,39 @@
    "statement_b": "the document numbers its items 1 to 47, and the printed answer key has 47 rows",
    "why": "a count in a filename is not evidence about the document, and here the two disagree by three",
    "resolution": "NONE. 47 records were coded, one per numbered item. The filename count is recorded on the source row as filename_claims and is not used anywhere."
+  },
+  {
+   "conflict_id": "TAX-0009",
+   "kind": "TAXONOMY_CONFLICT",
+   "opened": "2026-09-05",
+   "status": "open",
+   "about": "the exam-topic axis has no row reaching \"Solid Geometry\"",
+   "statement_a": "taxonomy.core.js has GEO_007 Solid Geometry and the KDG has N-SOLID",
+   "statement_b": "no exam topic in artifact 01 maps to either, so a three-dimensional item has no exam-topic home",
+   "why": "the eight existing taxonomy conflicts are the exam axis being FINER than the taxonomy; this is the axis missing a row the taxonomy has, which is the opposite direction",
+   "resolution": "NONE. taxonomy.core.js is frozen and artifact 01 records what its source said. The 43 three-dimensional items are filed under the nearest exam topic and every one declares both a topic and a KDG conflict."
+  },
+  {
+   "conflict_id": "SRC-0010",
+   "kind": "SOURCE_CONFLICT",
+   "opened": "2026-09-05",
+   "status": "open",
+   "about": "the solid-geometry file is named for 71 questions and contains 72",
+   "statement_a": "the filename reads \"Solid Geomtry 71 Real Question\"",
+   "statement_b": "the document numbers its items 1 to 72 with no gap or repeat, and the key has 72 rows",
+   "why": "the second filename count in two files to disagree with the document, this one in the opposite direction from the circles file",
+   "resolution": "NONE. 72 records were coded, one per numbered item. The filename count is recorded on the source row and used nowhere."
+  },
+  {
+   "conflict_id": "SRC-0011",
+   "kind": "SOURCE_CONFLICT",
+   "opened": "2026-09-05",
+   "status": "open",
+   "about": "the section carries two headings and the answer key repeats only one",
+   "statement_a": "the section is headed \"Areas&Volumes\" and, on the next line, \"Solid Geomtry\"",
+   "statement_b": "the answer key is headed \"Answers: Areas&Volumes\" alone, and the second heading is misspelled in both places",
+   "why": "the two names describe different scopes: roughly half the items are plane areas and perimeters, not solids",
+   "resolution": "NONE. Both headings are recorded in OBSERVED_TOPICS and the record carries the first; neither is corrected."
   }
  ]
 }

@@ -169,11 +169,18 @@ export function gate({
   }
 
   // ── conflicts: the known ones stay open, and none closes silently ─────────
-  const expectedTax = S.EXAM_TOPIC_TAXONOMY.filter(r => r.conflict).length;
-  const taxOpen = conflicts.filter(c => c.kind === 'TAXONOMY_CONFLICT' && c.status === 'open').length;
-  check(taxOpen === expectedTax, 'CONF-TAX-COUNT',
-    `${taxOpen} taxonomy conflicts are open, the mapping flags ${expectedTax}. ` +
-    'These are permanent: taxonomy.core.js is frozen and the exam axis is finer than it');
+  // Checked PER FLAGGED ROW, not by total count. The count form could not tell
+  // "each flagged row has an open conflict" from "eight taxonomy conflicts
+  // exist", so it rejected a NINTH conflict of a different origin — the exam
+  // axis having no Solid Geometry row at all, where the eight are the axis being
+  // FINER than the taxonomy. A gate that forbids recording a real conflict is
+  // worse than one that counts loosely.
+  for (const row of S.EXAM_TOPIC_TAXONOMY.filter(r => r.conflict))
+    check(conflicts.some(c => c.kind === 'TAXONOMY_CONFLICT' && c.status === 'open' &&
+                              (c.about ?? '').includes(`"${row.topic}"`)),
+      'CONF-TAX-COUNT',
+      `the mapping flags exam topic "${row.topic}" as conflicting with the frozen taxonomy, ` +
+      'and no open TAXONOMY_CONFLICT records it. These are permanent: taxonomy.core.js is frozen');
   for (const c of conflicts) {
     check(S.CONFLICT_KINDS.includes(c.kind), 'CONF-KIND-INVALID', `conflict ${c.conflict_id} has kind "${c.kind}"`);
     check(c.statement_a && c.statement_b, 'CONF-STATEMENTS-MISSING',

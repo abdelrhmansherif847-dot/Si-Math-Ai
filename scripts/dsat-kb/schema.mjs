@@ -257,6 +257,10 @@ export const OBSERVED_TOPICS = [
   'linear_system_of_equations', // the section heading, and the answer-key heading
   // seen in the circles corpus, 2026-09-05
   'circles',                    // the section heading, and the answer-key heading
+  // seen in the areas-and-volumes corpus, 2026-09-05. The section carries TWO
+  // headings and the answer key repeats only the first, so both are recorded.
+  'areas_and_volumes',
+  'solid_geometry',
 ];
 
 // ── the copyright guard ──────────────────────────────────────────────────────

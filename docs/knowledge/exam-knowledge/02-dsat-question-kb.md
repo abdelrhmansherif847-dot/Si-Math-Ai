@@ -1086,3 +1086,110 @@ circumference formula — were fixed in the data, not waived.
 artifact are untouched; ESTM1's payload md5 is unchanged.
 
 *Fifth ingestion, 2026-09-05.*
+
+---
+
+## 22. Sixth ingestion: the areas-and-volumes corpus
+
+`Solid_Geomtry_71_Real_Question.pdf`, 2026-09-05, sha256 `18c7134f010d…b706b50`,
+20 pages, **72 records**. The corpus is now **438**.
+
+One block: 72 administration-tagged items on pages 1–18, the answer key for all
+72 on pages 19–20. Fourth file from the same compiler. Text probe: **20 of 20**.
+
+### The exam-topic axis has no Solid Geometry row (TAX-0009)
+
+`taxonomy.core.js` has **GEO_007 Solid Geometry** and the KDG has **N-SOLID**.
+No exam topic in artifact 01 maps to either. **43 of these 72 items are
+three-dimensional and have no exam-topic home.**
+
+This is the *opposite* of the eight taxonomy conflicts already on file. Those are
+the exam axis being **finer** than the frozen taxonomy — Mean, Median and Mode as
+separate topics where the taxonomy has one. This is the axis missing a row the
+taxonomy has. Neither side is edited: `taxonomy.core.js` is frozen, and
+artifact 01 records what its source said.
+
+**The gate had to be fixed to let this be recorded at all.** `CONF-TAX-COUNT`
+compared the *total* of open `TAXONOMY_CONFLICT` rows against the number of
+flagged mapping rows, so it could not tell "each flagged row has an open
+conflict" from "eight taxonomy conflicts exist" — and it rejected a ninth of a
+different origin. It now checks **per flagged row**, which is the invariant it
+was always meant to hold. Closing one of the eight still fires it, a ninth no
+longer does, and a ninth cannot substitute for a missing one. All three are
+asserted in the registry suite.
+
+*A gate that forbids recording a real conflict is worse than one that counts
+loosely.*
+
+### The filename undercounts by one
+
+The items are numbered **1 to 72** with no gap or repeat and the key has 72 rows;
+the filename says 71. That is the **second filename in two files** to disagree
+with its document, and in the opposite direction from the circles file, which
+overcounted by three. Recorded as `SRC-0010`.
+
+`SRC-0011` records a third labelling problem in the same file: the section
+carries **two** headings — *Areas&Volumes* and *Solid Geomtry* (sic) — and the
+answer key repeats only the first. The two describe different scopes: 28 of the
+72 items are plane areas and perimeters, not solids at all.
+
+### Verification: 24 of 24
+
+Every student-produced-response item was re-derived and checked against the
+printed key with exact rational arithmetic. **24 of 24 agree**, including the
+rectangular pyramid whose two distinct slant heights round to the key's value,
+and the regular tetrahedron the stem never names — it identifies the solid only
+as "a right triangular pyramid with exactly six edges, each 96 cm". The 48
+multiple-choice items were derived against the printed options by hand.
+
+### What 72 items were worth
+
+**29 constructions.** The load-bearing mechanisms are `trap_cost` (43) then
+`abstraction` (20) — and in this material "abstraction" almost always means one
+specific thing: **knowing which power a given quantity carries.**
+
+That is the corpus's own lesson, repeated in five separate families:
+
+- area scales by the **square** of a linear factor (9 items),
+- a percentage rise in two dimensions **compounds** rather than doubling (3),
+- surface-area ratio is the **square** of an edge ratio, volume ratio the **cube** (3),
+- a tabulated **area** ratio must be rooted before it touches a perimeter (1),
+- and a volume ratio reaches a surface area only through a **cube root and then a
+  square** (2).
+
+Every one of these prints the un-powered scaling as a distractor. Six further
+items bury a single division under a paragraph about sampling trees for leaf
+water potential — where the tree count is prominent, irrelevant, and different in
+every one of the six.
+
+### Repetition, across four sets from one compiler
+
+| ingestion | records in a duplicate group |
+|---|---|
+| polynomials, block A | 43% |
+| linear systems | 48% |
+| circles | 60% |
+| areas & volumes | **51%** |
+
+The largest single family here is the similar-figures-area item, **eight times**.
+46 distinct mathematical fingerprints for 72 items.
+
+Four sets now put the rate between **43% and 60%**, which is a narrower band than
+three sets justified claiming. The earlier reading — that the rate rises as the
+topic narrows — is **not supported** by this file: areas-and-volumes is a wider
+topic than circles and repeats less, but more than the linear systems, which are
+narrower still. The honest statement is the range, not a trend.
+
+### Standing state
+
+CI **84/84 green** · 8 sources, 438 questions, 120 archetypes, 20 conflicts
+(**9** taxonomy + 11 source, all open) · 59 duplicate groups covering 150 of 438
+records · longest string in `questions.json` 192 characters. Nine validator
+catches during this ingestion — a missing source hash, numeric subscripts in
+signature names, and structural halvings written as literals — were all fixed in
+the data. **The numeral guard has now asked three times for a fraction to be
+written symbolically, and three times the answer was to write it out rather than
+waive the guard.** `taxonomy.core.js`, the KDG, the generator, the EST system and
+every exam artifact are untouched; ESTM1's payload md5 is unchanged.
+
+*Sixth ingestion, 2026-09-05.*
