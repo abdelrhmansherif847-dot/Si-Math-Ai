@@ -37,6 +37,7 @@ function fixture(over = {}) {
     source_id: 'S-001', source_file: 'fixture.pdf', source_page: 3, source_question_number: '7',
     provenance: 'third_party', provenance_confidence: 'OBSERVED',
     knowledge_use: 'REFERENCE', generation_eligibility: 'NOT_DIRECT_SOURCE',
+    observed_topic: 'exponential_functions', source_label: 'Exponential Functions',
     exam: 'DSAT', topic: 'Linear Equations',
     taxonomy_subtopics: ['ALG_006'], knowledge_nodes: ['N-LINEQ'], kdg_confidence: 'INFERRED',
     representation: 'symbolic_algebraic', target_type: 'parameter',
@@ -95,6 +96,48 @@ rejects({ representation: 'vibes' }, 'representation "vibes"', 'an invalid repre
 rejects({ answer_structure: 'mcq_7' }, 'answer_structure', 'an invalid answer structure is rejected');
 rejects({ provenance_confidence: 'PROBABLY' }, 'provenance_confidence', 'an invalid confidence label is rejected');
 rejects({ provenance_confidence: undefined }, 'missing required field', 'a missing confidence label is rejected');
+
+console.log('\n── observed_topic: what the SOURCE calls it, never the taxonomy ──');
+rejects({ observed_topic: undefined }, 'missing required field "observed_topic"',
+  'a record with no observed_topic is rejected');
+rejects({ observed_topic: 'whatever the source said' }, 'observed_topic',
+  'an observed_topic outside the observed vocabulary is rejected');
+rejects({ observed_topic: 'ALG_011' }, 'is a taxonomy subtopic id',
+  'a taxonomy subtopic id used as an observed_topic is rejected');
+{
+  const bad = validateRecord(fixture({ observed_topic: 'UNKNOWN' }), CTX);
+  ok(bad.length === 0, 'UNKNOWN is a valid observed_topic — a source that names no topic is still recordable');
+}
+{
+  // The point of the field: the source's word and the canonical mapping differ,
+  // and that must validate cleanly so the divergence can be counted later.
+  const bad = validateRecord(fixture({
+    observed_topic: 'negative_exponents', source_label: 'Negative Exponents',
+    topic: 'Linear Equations', taxonomy_subtopics: ['ALG_006'], knowledge_nodes: ['N-LINEQ'],
+  }), CTX);
+  ok(bad.length === 0, 'an observed_topic that differs from the canonical topic validates — divergence is the signal, not an error');
+}
+{
+  const bad = validateRecord(fixture({ source_label: 'Rational Exponents' }), CTX);
+  ok(bad.length === 0, 'source_label present validates');
+}
+{
+  const f = fixture(); delete f.source_label;
+  f.structural_fingerprint = structuralFingerprint(f);
+  const bad = validateRecord(f, CTX);
+  ok(bad.length === 0, 'source_label absent validates — it stays optional, for sources that print no label');
+}
+{
+  // observed_topic must not become a taxonomy node by any route.
+  const before = S.TAXONOMY_SUBTOPICS.join(',');
+  validateRecord(fixture({ observed_topic: 'scientific_notation' }), CTX);
+  ok(S.TAXONOMY_SUBTOPICS.join(',') === before, 'coding an observed_topic does not mutate the frozen taxonomy');
+  ok(!S.OBSERVED_TOPICS.some(o => S.TAXONOMY_SUBTOPICS.includes(o)),
+    'no observed topic is a taxonomy subtopic id');
+  ok(!S.OBSERVED_TOPICS.some(o => Object.values(S.TAXONOMY_SUBTOPIC_NAME).includes(o)),
+    'no observed topic is a taxonomy subtopic name');
+  ok(S.OBSERVED_TOPICS.includes('UNKNOWN'), 'the observed vocabulary keeps UNKNOWN');
+}
 
 console.log('\n── invented relationships need a conflict, not silence ──');
 rejects({ knowledge_nodes: ['N-QUAD'] }, 'invented KDG relationship',

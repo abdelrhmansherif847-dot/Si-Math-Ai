@@ -185,6 +185,55 @@ pages carried `https://t.me/satashkent` and fifteen administration tags.
 
 ---
 
+## 5.2 Three names for a topic, kept apart
+
+A question record carries a topic on **three separate axes**, and conflating any
+two of them destroys the comparison the knowledge base exists to make.
+
+| field | is | validated against | required |
+|---|---|---|---|
+| `source_label` | the source's **literal terminology**, verbatim, when it prints any | nothing — it is quoted, not interpreted | optional |
+| `observed_topic` | a **normalised** form of what the source calls or tests | the `OBSERVED_TOPICS` vocabulary — **never** `taxonomy.core.js` | **required** |
+| `topic` + `taxonomy_subtopics` | the **canonical** mapping into the project's frozen taxonomy | `taxonomy.core.js` and the published exam-topic map | **required** |
+
+So a single item reads:
+
+```
+source_label        "Negative Exponents"      what the page says
+observed_topic      negative_exponents        normalised, still the source's idea
+topic               Exponential Functions     canonical
+taxonomy_subtopics  ALG_002                   canonical
+conflicts           TOPIC_CLASSIFICATION_CONFLICT, KDG_MAPPING_CONFLICT
+```
+
+**`observed_topic` is deliberately not checked against the taxonomy.** Binding
+them would make every record agree with itself and the comparison would return
+nothing. A validator instead refuses an `observed_topic` that *is* a taxonomy
+subtopic id, and the gate keeps the two vocabularies disjoint.
+
+`OBSERVED_TOPICS` is a **closed list**, so a source using a word not yet in it
+fails validation and the new vocabulary becomes visible rather than accumulating
+silently as free text. **Adding an entry is not a taxonomy change**: it records
+somebody else's terminology and creates no canonical node.
+
+`UNKNOWN` is a member. A source that names no topic is still recordable, and no
+value is invented for it.
+
+### What the pilot shows
+
+| observed topic | n | canonical mapping |
+|---|--:|---|
+| `exponential_functions` | 43 | Exponential Functions / ALG_011 |
+| `exponential_models` | 29 | Exponential Functions / ALG_011 |
+| `exponents` | 15 | four different canonical mappings |
+| `rational_exponents` | 8 | Exponential Functions / ALG_002+ALG_003 |
+| `negative_exponents` | 4 | Exponential Functions / ALG_002 |
+| `exponent_rules` | 3 | Exponential Functions / ALG_002(+ALG_003) |
+| `scientific_notation` | 1 | Exponential Functions / ALG_002 |
+
+31 of 103 records diverge and say so. **Nothing is resolved by this** — it is the
+evidence to accumulate across sources before any taxonomy question is asked.
+
 ## 6. Confidence
 
 Four levels, on every claim group independently:

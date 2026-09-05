@@ -49,6 +49,14 @@ export function validateRecord(rec, ctx = {}) {
   };
   inEnum('provenance', S.PROVENANCE_IDS);
   inEnum('knowledge_use', S.KNOWLEDGE_USE);
+  // observed_topic is checked against the OBSERVED vocabulary and against
+  // NOTHING ELSE. It must not be validated against taxonomy.core.js: the two
+  // are compared, not reconciled, and binding one to the other would destroy
+  // the comparison this field exists for.
+  inEnum('observed_topic', S.OBSERVED_TOPICS);
+  if (has(rec, 'observed_topic') && S.TAXONOMY_SUBTOPICS.includes(rec.observed_topic))
+    at(`observed_topic "${rec.observed_topic}" is a taxonomy subtopic id — ` +
+       'observed topics record what a source calls something, never a canonical node');
   inEnum('generation_eligibility', S.GENERATION_ELIGIBILITY);
   inEnum('exam', S.EXAMS);
   inEnum('representation', S.REPRESENTATIONS);

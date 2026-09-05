@@ -11,7 +11,7 @@
 
 import { gate } from '../scripts/dsat-kb/gate.mjs';
 import { insideRepo, assertCorpusOutsideRepo, REPO_ROOT } from '../scripts/dsat-kb/registry.mjs';
-import { HARD_EXCLUDED_SHA256 } from '../scripts/dsat-kb/schema.mjs';
+import { HARD_EXCLUDED_SHA256, OBSERVED_TOPICS } from '../scripts/dsat-kb/schema.mjs';
 import { pageCount, provenanceScan, inflateAll } from '../scripts/dsat-kb/pdf.mjs';
 import { readFileSync, existsSync } from 'node:fs';
 import { SIMILARITY, SIMILARITY_THRESHOLDS, structuralFingerprint, mathematicalFingerprint, classifyPair }
@@ -161,6 +161,7 @@ const q = (o = {}) => {
     question_id: 'Q-001-p1-q1', source_id: 'S-001', source_file: 'f.pdf', source_page: 1,
     provenance: 'unknown', provenance_confidence: 'UNKNOWN',
     knowledge_use: 'REFERENCE', generation_eligibility: 'NOT_DIRECT_SOURCE',
+    observed_topic: 'exponential_functions', source_label: 'Exponential Functions',
     exam: 'DSAT', topic: 'Linear Equations',
     taxonomy_subtopics: ['ALG_006'], knowledge_nodes: ['N-LINEQ'],
     representation: 'verbal', target_type: 'value', archetype: 'A-UNCLASSIFIED',
@@ -223,6 +224,18 @@ fires('CONF-STATUS-INVALID', { conflicts: [...CONFLICTS, { conflict_id: 'X-3', k
   'an invalid conflict status is rejected');
 fires('CONF-RESOLVED-UNSIGNED', { conflicts: [...CONFLICTS, { conflict_id: 'X-4', kind: 'SOURCE_CONFLICT', status: 'resolved', about: 'x', statement_a: 'a', statement_b: 'b' }] },
   'a conflict resolved with no signature is rejected');
+
+console.log('\n── the observed vocabulary stays disjoint from the canonical one ──');
+{
+  const c = codes(gate(clean()));
+  ok(!c.some(x => x.startsWith('OBS-TOPIC-')), 'the gate reports no observed-vocabulary finding against the real registries');
+  ok(OBSERVED_TOPICS.length >= 2, 'the observed vocabulary is populated');
+  ok(OBSERVED_TOPICS.includes('UNKNOWN'), 'and keeps UNKNOWN for sources that name no topic');
+  ok(!OBSERVED_TOPICS.some(o => TAXONOMY_SUBTOPICS.includes(o)),
+    'no observed topic collides with a taxonomy subtopic id');
+  ok(TAXONOMY_SUBTOPICS.length === 33,
+    'and the frozen taxonomy is still 33 subtopics — observed topics create no taxonomy nodes');
+}
 
 console.log('\n── the copyright boundary on the raw stores ──');
 fires('TEXT-LONG-STRING', { raw: { 'questions.json': `{"note":"${'x'.repeat(250)}"}` } },

@@ -222,6 +222,32 @@ export const EXAM_TOPIC_TAXONOMY = [
 // alignment the ingestion published, rather than a second private copy.
 export { TOPIC_NODE_MAP } from '../../docs/knowledge/exam-knowledge/exam-structure-and-kdg.mjs';
 
+// ── observed topics ─────────────────────────────────────────────────────────
+// WHAT THE SOURCE ITSELF CALLS OR TESTS, normalised. This is deliberately NOT
+// the canonical taxonomy and is deliberately NOT validated against
+// taxonomy.core.js: the whole point is that the two can differ, so that
+//
+//     observed_topic  ->  canonical topic  ->  match or conflict
+//
+// can be compared and accumulated across sources. An entry here is a record of
+// somebody else's vocabulary; it creates no taxonomy node and confers no
+// standing on the term.
+//
+// A closed list on purpose. When the next PDF uses a word not in it, validation
+// fails and the new source vocabulary becomes visible, instead of accumulating
+// silently as free text. Adding an entry is not a taxonomy change.
+export const OBSERVED_TOPICS = [
+  'UNKNOWN',              // the source establishes no topic for the item
+  // seen in the exponents pilot, 2026-09-05
+  'exponents',            // block A section heading "Exponents Real"
+  'negative_exponents',
+  'exponential_functions',
+  'exponential_models',
+  'rational_exponents',
+  'exponent_rules',
+  'scientific_notation',
+];
+
 // ── the copyright guard ──────────────────────────────────────────────────────
 // A record must never carry question text. These field names are refused
 // outright; looksLikeSourceText() catches prose smuggled into a field that is
@@ -253,7 +279,7 @@ export const QUESTION_RECORD_FIELDS = {
   required: [
     'question_id', 'source_id', 'source_file', 'source_page', 'provenance',
     'provenance_confidence', 'knowledge_use', 'generation_eligibility',
-    'exam', 'topic', 'taxonomy_subtopics',
+    'observed_topic', 'exam', 'topic', 'taxonomy_subtopics',
     'knowledge_nodes', 'representation', 'target_type', 'archetype',
     'archetype_confidence', 'reasoning_mechanisms', 'distractor_logic',
     'difficulty_evidence', 'difficulty_confidence', 'answer_structure',

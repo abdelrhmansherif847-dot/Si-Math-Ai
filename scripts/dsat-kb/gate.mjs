@@ -48,6 +48,16 @@ export function gate({
     'competing_interpretations', 'option_testing'])
     check(S.MECHANISM_IDS.includes(req), 'SCHEMA-MECHANISM-MISSING',
       `the brief's mechanism "${req}" is missing from the registry`);
+  // The observed vocabulary must stay disjoint from the canonical one, or the
+  // observed-vs-canonical comparison collapses into a tautology.
+  for (const o of S.OBSERVED_TOPICS) {
+    check(!S.TAXONOMY_SUBTOPICS.includes(o), 'OBS-TOPIC-IS-TAXONOMY-ID',
+      `observed topic "${o}" is a taxonomy subtopic id`);
+    check(!Object.values(S.TAXONOMY_SUBTOPIC_NAME).includes(o), 'OBS-TOPIC-IS-TAXONOMY-NAME',
+      `observed topic "${o}" is a taxonomy subtopic name — observed topics are source vocabulary`);
+  }
+  check(S.OBSERVED_TOPICS.includes('UNKNOWN'), 'OBS-TOPIC-NO-UNKNOWN',
+    'the observed-topic vocabulary has no UNKNOWN — a source that names no topic must still be recordable');
   check(S.DISTRACTOR_CATEGORIES.includes('unknown'), 'SCHEMA-DISTRACTOR-UNKNOWN',
     'the distractor taxonomy has no "unknown" — without it a coder must invent a rationale');
   check(S.CONFIDENCE.includes('UNKNOWN'), 'SCHEMA-CONFIDENCE-UNKNOWN',
