@@ -991,3 +991,98 @@ fired once more, on my own provenance-evidence string; the string was shortened.
 artifact are untouched; ESTM1's payload md5 is unchanged.
 
 *Fourth ingestion, 2026-09-05.*
+
+---
+
+## 21. Fifth ingestion: the circles corpus
+
+`Circles_50_REAL_QUESTION_WITH_ANS_KEY.pdf`, 2026-09-05, sha256
+`0f40d5e89f34…b910e`, 14 pages, **47 records**. The corpus is now **366**.
+
+One block: 47 administration-tagged items on pages 1–12, the answer key for all
+47 on pages 13–14. Same compiler as the exponents pilot and the linear systems —
+same Telegram annotation, same per-page watermark. Text probe: **14 of 14**.
+
+### The filename says 50. The document has 47.
+
+The items are numbered **1 to 47** and the printed key has **47 rows**. That is
+recorded as `SRC-0009` and on the source row as `filename_claims: 50` /
+`questions_found: 47`.
+
+It is worth setting against the polynomials, where the set was named "130
+Questions" and the coded total came to exactly 130 — that agreement was
+*evidence of completeness*. Here the same kind of claim is simply wrong, which is
+the point of never letting a filename classify anything: **D-1 reads the
+document, and so does the count.**
+
+### Verification: 16 of 16
+
+Every student-produced-response item was re-derived and checked against the
+printed key with exact rational arithmetic. **16 of 16 agree.** The 31
+multiple-choice items were derived against the printed options by hand.
+
+One is worth naming. Item 33 gives a figure marked *not drawn to scale*, two
+perpendicular chords, one half-chord length and "the diameter of the circle is
+175" — without saying **which** segment is the diameter. The answer follows only
+if the perpendicular chord `AC` is it, in which case the chords theorem gives
+`AD·DC = BD²` with `AD + DC = 175`, a quadratic whose roots are 2 and 173 and
+whose ratio is the key's `173/2`. **The key confirms an inference the stem does
+not state**, and the archetype records the dependence.
+
+### What 47 items were worth
+
+**25 constructions** — the widest spread per item of any ingestion so far, and
+the reason is that "circles" is not one topic. The records reach four subtopics
+(GEO_006 throughout, then GEO_008 coordinate geometry ×28, GEO_005 trigonometry
+×5, GEO_002 triangles ×2) and four KDG nodes. Seven records declare both a
+topic and a KDG conflict; 40 carry none.
+
+Three constructions are worth naming because they are about *where the trap
+lives* rather than about circles:
+
+- **`A-CIRC-SCALE-RADIUS`** — the printed constant is the radius **squared**, so
+  doubling the radius multiplies it by four. Every item in this family prints the
+  linear scaling as a distractor.
+- **`A-CIRC-EQN-READ-FEATURE`** — nothing is computed; the printed shift is the
+  *negative* of the coordinate, and the option set is exactly the four sign
+  combinations. An item that looks like a reading is two independent sign
+  decisions.
+- **`A-CIRC-TRANSLATE`** at item 40 — the circle is *plotted*, translated 91
+  units, and the asked constant is the radius squared, which a translation leaves
+  alone. **The graph and the translation are both decoys.**
+
+Load-bearing mechanisms lean on `trap_cost` (28 of 47), then `abstraction` (11).
+
+### The most repetitive set yet
+
+**28 of 47 records (60%) sit inside a duplicate group** — 13 groups, 31 distinct
+mathematical fingerprints for 47 items.
+
+| ingestion | records in a duplicate group |
+|---|---|
+| polynomials | 14% |
+| linear systems | 48% |
+| circles | **60%** |
+
+The largest family is the "complete the square, then find the perimeter of the
+circumscribing square" item, **four times**; two of those four (items 7 and 11)
+are the same question printed twice, options included, six pages apart. So is the
+unit-circle angle pair (items 18 and 19), which share a stem verbatim and differ
+only in their option sets.
+
+That trend across three compiled sets from one compiler is now the most useful
+thing this corpus knows about its own sources: **a topic extract from this guide
+repeats roughly half its own constructions**, and the rate rises as the topic
+narrows.
+
+### Standing state
+
+CI **84/84 green** · 7 sources, 366 questions, 91 archetypes, 17 conflicts
+(8 taxonomy + 9 source, all open) · 46 duplicate groups covering 113 of 366
+records · longest string in `questions.json` 192 characters. Two validator
+catches during this ingestion — a missing source hash and a literal `2` inside a
+circumference formula — were fixed in the data, not waived.
+`taxonomy.core.js`, the KDG, the generator, the EST system and every exam
+artifact are untouched; ESTM1's payload md5 is unchanged.
+
+*Fifth ingestion, 2026-09-05.*

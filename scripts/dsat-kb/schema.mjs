@@ -255,6 +255,8 @@ export const OBSERVED_TOPICS = [
   'equivalent_expressions', // block B Skill label, printed on all 49 pages
   // seen in the linear-systems corpus, 2026-09-05
   'linear_system_of_equations', // the section heading, and the answer-key heading
+  // seen in the circles corpus, 2026-09-05
+  'circles',                    // the section heading, and the answer-key heading
 ];
 
 // ── the copyright guard ──────────────────────────────────────────────────────

@@ -31246,6 +31246,4704 @@
         "tgt:parameter"
       ],
       "duplicate_group": "DG-0030"
+    },
+    {
+      "question_id": "Q-007-p1-q1",
+      "source_id": "S-007",
+      "source_file": "aaacabd4-Circles_50_REAL_QUESTION_WITH_ANS_KEY.pdf",
+      "source_page": 1,
+      "source_question_number": "1",
+      "source_block": "A",
+      "source_label": "Circles",
+      "source_administration": "March US 2023",
+      "observed_topic": "circles",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "47 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a per-page handle watermark",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Circle",
+      "taxonomy_subtopics": [
+        "GEO_006",
+        "GEO_008"
+      ],
+      "knowledge_nodes": [
+        "N-CIRC",
+        "N-COORD"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "symbolic_algebraic",
+      "target_type": "value",
+      "archetype": "A-CIRC-EQN-READ-FEATURE",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "trap_cost",
+          "load_bearing": true,
+          "counterfactual": "the printed shifts are the negatives of the coordinates, and both sign errors are printed"
+        }
+      ],
+      "distractor_logic": [],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "student_produced_response",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "circle_in_centre_radius_form"
+        ],
+        "relations": [
+          "(x - h)^2 + (y - k)^2 = r^2"
+        ],
+        "given_roles": [
+          "shift",
+          "shift",
+          "constant"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "diameter_asked",
+          "radius_is_an_integer"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 1,
+      "observed_notes": "section heading: Circles",
+      "structural_fingerprint": "ab44a446ed41d98d",
+      "mathematical_fingerprint": "0d12864a209f3ff6",
+      "fingerprint_components": [
+        "ans:student_produced_response",
+        "ask:value",
+        "con:diameter_asked",
+        "con:radius_is_an_integer",
+        "giv:constant",
+        "giv:shift",
+        "mech:trap_cost",
+        "obj:circle_in_centre_radius_form",
+        "rel:(v1 - v2)^# + (v3 - v4)^# = v5^#",
+        "rep:symbolic_algebraic",
+        "stim:none",
+        "tgt:value"
+      ]
+    },
+    {
+      "question_id": "Q-007-p1-q2",
+      "source_id": "S-007",
+      "source_file": "aaacabd4-Circles_50_REAL_QUESTION_WITH_ANS_KEY.pdf",
+      "source_page": 1,
+      "source_question_number": "2",
+      "source_block": "A",
+      "source_label": "Circles",
+      "source_administration": "March US 2023",
+      "observed_topic": "circles",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "47 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a per-page handle watermark",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Circle",
+      "taxonomy_subtopics": [
+        "GEO_006",
+        "GEO_008"
+      ],
+      "knowledge_nodes": [
+        "N-CIRC",
+        "N-COORD"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "symbolic_algebraic",
+      "target_type": "value",
+      "archetype": "A-CIRC-GENERAL-FORM-FEATURE",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "hidden_step",
+          "load_bearing": true,
+          "counterfactual": "the equation must be completed to standard form before any length exists"
+        },
+        {
+          "id": "multiconcept",
+          "load_bearing": true,
+          "counterfactual": "a completion of the square feeds a geometric relation between circle and square"
+        },
+        {
+          "id": "trap_cost",
+          "load_bearing": true,
+          "counterfactual": "the perimeter built from the radius rather than the diameter is printed"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "incomplete_reasoning",
+          "wrong_route": "the perimeter built from the radius instead of the diameter"
+        },
+        {
+          "category": "arithmetic_slip",
+          "wrong_route": "the radius taken as the unrooted constant"
+        },
+        {
+          "category": "incomplete_reasoning",
+          "wrong_route": "the side reported instead of the perimeter"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "circle_in_general_form_inscribed_in_a_square"
+        ],
+        "relations": [
+          "x^2 - a*x + y^2 - b*y - c = 0"
+        ],
+        "given_roles": [
+          "coefficient",
+          "coefficient",
+          "constant"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "completion_of_the_square_required",
+          "side_equals_the_diameter",
+          "perimeter_asked"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 4,
+      "observed_notes": "section heading: Circles",
+      "structural_fingerprint": "053109b3bf52bfad",
+      "mathematical_fingerprint": "853862a0fb65f19e",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:value",
+        "con:completion_of_the_square_required",
+        "con:perimeter_asked",
+        "con:side_equals_the_diameter",
+        "dis:arithmetic_slip",
+        "dis:incomplete_reasoning",
+        "giv:coefficient",
+        "giv:constant",
+        "mech:hidden_step",
+        "mech:multiconcept",
+        "mech:trap_cost",
+        "obj:circle_in_general_form_inscribed_in_a_square",
+        "rel:v1^# - v2*v1 + v3^# - v4*v3 - v5 = #",
+        "rep:symbolic_algebraic",
+        "stim:none",
+        "tgt:value"
+      ],
+      "duplicate_group": "DG-0034"
+    },
+    {
+      "question_id": "Q-007-p1-q3",
+      "source_id": "S-007",
+      "source_file": "aaacabd4-Circles_50_REAL_QUESTION_WITH_ANS_KEY.pdf",
+      "source_page": 1,
+      "source_question_number": "3",
+      "source_block": "A",
+      "source_label": "Circles",
+      "source_administration": "June 2023",
+      "observed_topic": "circles",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "47 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a per-page handle watermark",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Circle",
+      "taxonomy_subtopics": [
+        "GEO_006",
+        "GEO_008"
+      ],
+      "knowledge_nodes": [
+        "N-CIRC",
+        "N-COORD"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "symbolic_algebraic",
+      "target_type": "value",
+      "archetype": "A-CIRC-POINT-ON-CIRCLE",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "trap_cost",
+          "load_bearing": true,
+          "counterfactual": "the centre and its reflection are printed, and neither lies on the circle"
+        },
+        {
+          "id": "multiconcept",
+          "load_bearing": true,
+          "counterfactual": "the surviving options carry surds, so the test is algebraic rather than numeric"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "wrong_interpretation",
+          "wrong_route": "the centre offered as a point on the circle"
+        },
+        {
+          "category": "sign_error",
+          "wrong_route": "the centre with both signs flipped"
+        },
+        {
+          "category": "sign_error",
+          "wrong_route": "the surd point with its shifts applied the wrong way"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "circle_in_centre_radius_form_with_candidate_points"
+        ],
+        "relations": [
+          "(x - h)^2 + (y - k)^2 = r^2"
+        ],
+        "given_roles": [
+          "shift",
+          "shift",
+          "constant"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "candidates_include_the_centre",
+          "surd_coordinates",
+          "substitution_test"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 3,
+      "observed_notes": "section heading: Circles",
+      "structural_fingerprint": "d51a4f608bc7d96b",
+      "mathematical_fingerprint": "d9e31f1db2542046",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:value",
+        "con:candidates_include_the_centre",
+        "con:substitution_test",
+        "con:surd_coordinates",
+        "dis:sign_error",
+        "dis:wrong_interpretation",
+        "giv:constant",
+        "giv:shift",
+        "mech:multiconcept",
+        "mech:trap_cost",
+        "obj:circle_in_centre_radius_form_with_candidate_points",
+        "rel:(v1 - v2)^# + (v3 - v4)^# = v5^#",
+        "rep:symbolic_algebraic",
+        "stim:none",
+        "tgt:value"
+      ]
+    },
+    {
+      "question_id": "Q-007-p1-q4",
+      "source_id": "S-007",
+      "source_file": "aaacabd4-Circles_50_REAL_QUESTION_WITH_ANS_KEY.pdf",
+      "source_page": 1,
+      "source_question_number": "4",
+      "source_block": "A",
+      "source_label": "Circles",
+      "source_administration": "August US 2023",
+      "observed_topic": "circles",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "47 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a per-page handle watermark",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Circle",
+      "taxonomy_subtopics": [
+        "GEO_006",
+        "GEO_008"
+      ],
+      "knowledge_nodes": [
+        "N-CIRC",
+        "N-COORD"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "symbolic_algebraic",
+      "target_type": "equation",
+      "archetype": "A-CIRC-TRANSLATE",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "trap_cost",
+          "load_bearing": true,
+          "counterfactual": "the options move the other coordinate, move the right one the wrong way, and change the radius"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "wrong_interpretation",
+          "wrong_route": "the other coordinate translated"
+        },
+        {
+          "category": "sign_error",
+          "wrong_route": "the shift applied in the wrong direction"
+        },
+        {
+          "category": "wrong_interpretation",
+          "wrong_route": "the radius changed by the translation"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "circle_translated_in_one_direction"
+        ],
+        "relations": [
+          "(x - h)^2 + (y - k)^2 = r^2"
+        ],
+        "given_roles": [
+          "shift",
+          "shift",
+          "constant",
+          "translation"
+        ],
+        "asked_role": "equation",
+        "constraints": [
+          "horizontal_translation_only",
+          "radius_unchanged"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 2,
+      "observed_notes": "section heading: Circles",
+      "structural_fingerprint": "3f2404a53cce9e4c",
+      "mathematical_fingerprint": "3a0fd3bf927eb1de",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:equation",
+        "con:horizontal_translation_only",
+        "con:radius_unchanged",
+        "dis:sign_error",
+        "dis:wrong_interpretation",
+        "giv:constant",
+        "giv:shift",
+        "giv:translation",
+        "mech:trap_cost",
+        "obj:circle_translated_in_one_direction",
+        "rel:(v1 - v2)^# + (v3 - v4)^# = v5^#",
+        "rep:symbolic_algebraic",
+        "stim:none",
+        "tgt:equation"
+      ],
+      "duplicate_group": "DG-0035"
+    },
+    {
+      "question_id": "Q-007-p2-q5",
+      "source_id": "S-007",
+      "source_file": "aaacabd4-Circles_50_REAL_QUESTION_WITH_ANS_KEY.pdf",
+      "source_page": 2,
+      "source_question_number": "5",
+      "source_block": "A",
+      "source_label": "Circles",
+      "source_administration": "August US 2023",
+      "observed_topic": "circles",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "47 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a per-page handle watermark",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Circle",
+      "taxonomy_subtopics": [
+        "GEO_006",
+        "GEO_008"
+      ],
+      "knowledge_nodes": [
+        "N-CIRC",
+        "N-COORD"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "symbolic_algebraic",
+      "target_type": "parameter",
+      "archetype": "A-CIRC-EXPAND-TO-GENERAL",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "filtering",
+          "load_bearing": true,
+          "counterfactual": "only the constant term is asked, so the linear coefficients are intermediate work"
+        },
+        {
+          "id": "reversal",
+          "load_bearing": true,
+          "counterfactual": "the standard form must be built from prose before it can be expanded"
+        }
+      ],
+      "distractor_logic": [],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "student_produced_response",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "circle_from_centre_and_radius_in_general_form"
+        ],
+        "relations": [
+          "x^2 + y^2 + a*x + b*y + c = 0"
+        ],
+        "given_roles": [
+          "centre",
+          "radius"
+        ],
+        "asked_role": "parameter",
+        "constraints": [
+          "centre_and_radius_given_in_prose",
+          "constant_term_asked",
+          "expansion_required"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 3,
+      "observed_notes": "section heading: Circles",
+      "structural_fingerprint": "3b974d31e4c31d26",
+      "mathematical_fingerprint": "3c4c7047eb11e1aa",
+      "fingerprint_components": [
+        "ans:student_produced_response",
+        "ask:parameter",
+        "con:centre_and_radius_given_in_prose",
+        "con:constant_term_asked",
+        "con:expansion_required",
+        "giv:centre",
+        "giv:radius",
+        "mech:filtering",
+        "mech:reversal",
+        "obj:circle_from_centre_and_radius_in_general_form",
+        "rel:v1^# + v2^# + v3*v1 + v4*v2 + v5 = #",
+        "rep:symbolic_algebraic",
+        "stim:none",
+        "tgt:parameter"
+      ],
+      "duplicate_group": "DG-0036"
+    },
+    {
+      "question_id": "Q-007-p2-q6",
+      "source_id": "S-007",
+      "source_file": "aaacabd4-Circles_50_REAL_QUESTION_WITH_ANS_KEY.pdf",
+      "source_page": 2,
+      "source_question_number": "6",
+      "source_block": "A",
+      "source_label": "Circles",
+      "source_administration": "August US 2023",
+      "observed_topic": "circles",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "47 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a per-page handle watermark",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Circle",
+      "taxonomy_subtopics": [
+        "GEO_006",
+        "GEO_002"
+      ],
+      "knowledge_nodes": [
+        "N-CIRC",
+        "N-TRI"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "geometry_figure",
+      "target_type": "value",
+      "archetype": "A-CIRC-INSCRIBED-EQUILATERAL",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "multiconcept",
+          "load_bearing": true,
+          "counterfactual": "an equilateral height relation and the radius of the circumscribing circle must be combined"
+        },
+        {
+          "id": "representation_switch",
+          "load_bearing": true,
+          "counterfactual": "the figure supplies the configuration and nothing else is stated in symbols"
+        },
+        {
+          "id": "trap_cost",
+          "load_bearing": true,
+          "counterfactual": "the two common surds appear both plain and reduced by one"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "arithmetic_slip",
+          "wrong_route": "the other common surd used"
+        },
+        {
+          "category": "incomplete_reasoning",
+          "wrong_route": "the surd reduced by one, as if a segment were subtracted"
+        },
+        {
+          "category": "arithmetic_slip",
+          "wrong_route": "the other surd reduced by one"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "geometry_figure",
+      "mathematical_signature": {
+        "objects": [
+          "equilateral_triangle_on_a_diameter"
+        ],
+        "relations": [
+          "AC is a diameter",
+          "triangle ACB is equilateral",
+          "BP perpendicular to AC"
+        ],
+        "given_roles": [
+          "diameter",
+          "vertex",
+          "foot"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "figure_supplied",
+          "ratio_to_the_radius_asked",
+          "surd_options"
+        ]
+      },
+      "conflicts": [
+        "TOPIC_CLASSIFICATION_CONFLICT",
+        "KDG_MAPPING_CONFLICT"
+      ],
+      "ingested_on": "2026-09-05",
+      "step_count": 4,
+      "observed_notes": "section heading: Circles",
+      "stimulus_id": "ST-007-6",
+      "structural_fingerprint": "5a9f0794bb8e50cd",
+      "mathematical_fingerprint": "5d9c493da0b6ce7a",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:value",
+        "con:figure_supplied",
+        "con:ratio_to_the_radius_asked",
+        "con:surd_options",
+        "dis:arithmetic_slip",
+        "dis:incomplete_reasoning",
+        "giv:diameter",
+        "giv:foot",
+        "giv:vertex",
+        "mech:multiconcept",
+        "mech:representation_switch",
+        "mech:trap_cost",
+        "obj:equilateral_triangle_on_a_diameter",
+        "rel:AC is v1 diameter",
+        "rel:BP perpendicular to AC",
+        "rel:triangle ACB is equilateral",
+        "rep:geometry_figure",
+        "stim:geometry_figure",
+        "tgt:value"
+      ]
+    },
+    {
+      "question_id": "Q-007-p2-q7",
+      "source_id": "S-007",
+      "source_file": "aaacabd4-Circles_50_REAL_QUESTION_WITH_ANS_KEY.pdf",
+      "source_page": 2,
+      "source_question_number": "7",
+      "source_block": "A",
+      "source_label": "Circles",
+      "source_administration": "November 2023",
+      "observed_topic": "circles",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "47 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a per-page handle watermark",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Circle",
+      "taxonomy_subtopics": [
+        "GEO_006",
+        "GEO_008"
+      ],
+      "knowledge_nodes": [
+        "N-CIRC",
+        "N-COORD"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "symbolic_algebraic",
+      "target_type": "value",
+      "archetype": "A-CIRC-GENERAL-FORM-FEATURE",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "hidden_step",
+          "load_bearing": true,
+          "counterfactual": "the equation must be completed to standard form before any length exists"
+        },
+        {
+          "id": "multiconcept",
+          "load_bearing": true,
+          "counterfactual": "a completion of the square feeds a geometric relation between circle and square"
+        },
+        {
+          "id": "trap_cost",
+          "load_bearing": true,
+          "counterfactual": "the perimeter built from the radius rather than the diameter is printed"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "incomplete_reasoning",
+          "wrong_route": "the perimeter built from the radius instead of the diameter"
+        },
+        {
+          "category": "arithmetic_slip",
+          "wrong_route": "the radius taken as the unrooted constant"
+        },
+        {
+          "category": "incomplete_reasoning",
+          "wrong_route": "the side reported instead of the perimeter"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "circle_in_general_form_inscribed_in_a_square"
+        ],
+        "relations": [
+          "x^2 - a*x + y^2 - b*y - c = 0"
+        ],
+        "given_roles": [
+          "coefficient",
+          "coefficient",
+          "constant"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "completion_of_the_square_required",
+          "side_equals_the_diameter",
+          "perimeter_asked"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 4,
+      "observed_notes": "section heading: Circles",
+      "structural_fingerprint": "053109b3bf52bfad",
+      "mathematical_fingerprint": "853862a0fb65f19e",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:value",
+        "con:completion_of_the_square_required",
+        "con:perimeter_asked",
+        "con:side_equals_the_diameter",
+        "dis:arithmetic_slip",
+        "dis:incomplete_reasoning",
+        "giv:coefficient",
+        "giv:constant",
+        "mech:hidden_step",
+        "mech:multiconcept",
+        "mech:trap_cost",
+        "obj:circle_in_general_form_inscribed_in_a_square",
+        "rel:v1^# - v2*v1 + v3^# - v4*v3 - v5 = #",
+        "rep:symbolic_algebraic",
+        "stim:none",
+        "tgt:value"
+      ],
+      "duplicate_group": "DG-0034"
+    },
+    {
+      "question_id": "Q-007-p2-q8",
+      "source_id": "S-007",
+      "source_file": "aaacabd4-Circles_50_REAL_QUESTION_WITH_ANS_KEY.pdf",
+      "source_page": 2,
+      "source_question_number": "8",
+      "source_block": "A",
+      "source_label": "Circles",
+      "source_administration": "November 2023",
+      "observed_topic": "circles",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "47 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a per-page handle watermark",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Circle",
+      "taxonomy_subtopics": [
+        "GEO_006",
+        "GEO_008"
+      ],
+      "knowledge_nodes": [
+        "N-CIRC",
+        "N-COORD"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "symbolic_algebraic",
+      "target_type": "value",
+      "archetype": "A-CIRC-TANGENT-SLOPE",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "inference",
+          "load_bearing": true,
+          "counterfactual": "the tangent is perpendicular to the radius, which is the only fact the item needs"
+        },
+        {
+          "id": "trap_cost",
+          "load_bearing": true,
+          "counterfactual": "the radius slope, its reciprocal and its negation are all printed"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "incomplete_reasoning",
+          "wrong_route": "the radius slope reported"
+        },
+        {
+          "category": "reversal_error",
+          "wrong_route": "the reciprocal taken without negating"
+        },
+        {
+          "category": "sign_error",
+          "wrong_route": "the negation taken without inverting"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "circle_with_a_tangent_at_a_named_point"
+        ],
+        "relations": [
+          "centre (h, k)",
+          "point of tangency (p, q)"
+        ],
+        "given_roles": [
+          "centre",
+          "point"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "perpendicular_radius",
+          "integer_slope",
+          "no_equation_given"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 2,
+      "observed_notes": "section heading: Circles",
+      "structural_fingerprint": "ccd13e92463333fb",
+      "mathematical_fingerprint": "75b85c732169de20",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:value",
+        "con:integer_slope",
+        "con:no_equation_given",
+        "con:perpendicular_radius",
+        "dis:incomplete_reasoning",
+        "dis:reversal_error",
+        "dis:sign_error",
+        "giv:centre",
+        "giv:point",
+        "mech:inference",
+        "mech:trap_cost",
+        "obj:circle_with_a_tangent_at_a_named_point",
+        "rel:centre (v1, v2)",
+        "rel:point of tangency (v1, v2)",
+        "rep:symbolic_algebraic",
+        "stim:none",
+        "tgt:value"
+      ],
+      "duplicate_group": "DG-0037"
+    },
+    {
+      "question_id": "Q-007-p3-q9",
+      "source_id": "S-007",
+      "source_file": "aaacabd4-Circles_50_REAL_QUESTION_WITH_ANS_KEY.pdf",
+      "source_page": 3,
+      "source_question_number": "9",
+      "source_block": "A",
+      "source_label": "Circles",
+      "source_administration": "December 2023",
+      "observed_topic": "circles",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "47 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a per-page handle watermark",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Circle",
+      "taxonomy_subtopics": [
+        "GEO_006"
+      ],
+      "knowledge_nodes": [
+        "N-CIRC"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "geometry_figure",
+      "target_type": "value",
+      "archetype": "A-CIRC-ARC-SUM-CIRCUMFERENCE",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "inference",
+          "load_bearing": true,
+          "counterfactual": "the two arcs between the same two points partition the circle, so the answer is their sum"
+        },
+        {
+          "id": "trap_cost",
+          "load_bearing": true,
+          "counterfactual": "each arc is printed on its own, and so is their difference"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "incomplete_reasoning",
+          "wrong_route": "the minor arc reported"
+        },
+        {
+          "category": "incomplete_reasoning",
+          "wrong_route": "the major arc reported"
+        },
+        {
+          "category": "arithmetic_slip",
+          "wrong_route": "the difference of the arcs reported"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "geometry_figure",
+      "mathematical_signature": {
+        "objects": [
+          "minor_and_major_arc_between_two_points"
+        ],
+        "relations": [
+          "minor + major = C"
+        ],
+        "given_roles": [
+          "arc_length",
+          "arc_length"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "figure_supplied",
+          "partition_of_the_whole",
+          "both_arcs_given"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 1,
+      "observed_notes": "section heading: Circles",
+      "stimulus_id": "ST-007-9",
+      "structural_fingerprint": "5ff7b6ef9263d97e",
+      "mathematical_fingerprint": "a833b22f83efbeb6",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:value",
+        "con:both_arcs_given",
+        "con:figure_supplied",
+        "con:partition_of_the_whole",
+        "dis:arithmetic_slip",
+        "dis:incomplete_reasoning",
+        "giv:arc_length",
+        "mech:inference",
+        "mech:trap_cost",
+        "obj:minor_and_major_arc_between_two_points",
+        "rel:minor + major = v1",
+        "rep:geometry_figure",
+        "stim:geometry_figure",
+        "tgt:value"
+      ]
+    },
+    {
+      "question_id": "Q-007-p3-q10",
+      "source_id": "S-007",
+      "source_file": "aaacabd4-Circles_50_REAL_QUESTION_WITH_ANS_KEY.pdf",
+      "source_page": 3,
+      "source_question_number": "10",
+      "source_block": "A",
+      "source_label": "Circles",
+      "source_administration": "March 2024",
+      "observed_topic": "circles",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "47 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a per-page handle watermark",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Circle",
+      "taxonomy_subtopics": [
+        "GEO_006",
+        "GEO_008"
+      ],
+      "knowledge_nodes": [
+        "N-CIRC",
+        "N-COORD"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "symbolic_algebraic",
+      "target_type": "value",
+      "archetype": "A-CIRC-EQN-READ-FEATURE",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "trap_cost",
+          "load_bearing": true,
+          "counterfactual": "the printed shifts are the negatives of the coordinates, and both sign errors are printed"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "sign_error",
+          "wrong_route": "both centre coordinates copied with the printed sign"
+        },
+        {
+          "category": "sign_error",
+          "wrong_route": "one centre coordinate copied with the printed sign"
+        },
+        {
+          "category": "sign_error",
+          "wrong_route": "the other centre coordinate copied with the printed sign"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "circle_in_centre_radius_form"
+        ],
+        "relations": [
+          "(x - h)^2 + (y - k)^2 = r^2"
+        ],
+        "given_roles": [
+          "shift",
+          "shift",
+          "constant"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "centre_asked",
+          "both_signs_flipped_among_the_options"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 1,
+      "observed_notes": "section heading: Circles",
+      "structural_fingerprint": "ab1f47e6c459a50e",
+      "mathematical_fingerprint": "6009f74aac461b59",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:value",
+        "con:both_signs_flipped_among_the_options",
+        "con:centre_asked",
+        "dis:sign_error",
+        "giv:constant",
+        "giv:shift",
+        "mech:trap_cost",
+        "obj:circle_in_centre_radius_form",
+        "rel:(v1 - v2)^# + (v3 - v4)^# = v5^#",
+        "rep:symbolic_algebraic",
+        "stim:none",
+        "tgt:value"
+      ],
+      "duplicate_group": "DG-0038"
+    },
+    {
+      "question_id": "Q-007-p3-q11",
+      "source_id": "S-007",
+      "source_file": "aaacabd4-Circles_50_REAL_QUESTION_WITH_ANS_KEY.pdf",
+      "source_page": 3,
+      "source_question_number": "11",
+      "source_block": "A",
+      "source_label": "Circles",
+      "source_administration": "March 2024",
+      "observed_topic": "circles",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "47 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a per-page handle watermark",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Circle",
+      "taxonomy_subtopics": [
+        "GEO_006",
+        "GEO_008"
+      ],
+      "knowledge_nodes": [
+        "N-CIRC",
+        "N-COORD"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "symbolic_algebraic",
+      "target_type": "value",
+      "archetype": "A-CIRC-GENERAL-FORM-FEATURE",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "hidden_step",
+          "load_bearing": true,
+          "counterfactual": "the equation must be completed to standard form before any length exists"
+        },
+        {
+          "id": "multiconcept",
+          "load_bearing": true,
+          "counterfactual": "a completion of the square feeds a geometric relation between circle and square"
+        },
+        {
+          "id": "trap_cost",
+          "load_bearing": true,
+          "counterfactual": "the perimeter built from the radius rather than the diameter is printed"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "incomplete_reasoning",
+          "wrong_route": "the perimeter built from the radius instead of the diameter"
+        },
+        {
+          "category": "arithmetic_slip",
+          "wrong_route": "the radius taken as the unrooted constant"
+        },
+        {
+          "category": "incomplete_reasoning",
+          "wrong_route": "the side reported instead of the perimeter"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "circle_in_general_form_inscribed_in_a_square"
+        ],
+        "relations": [
+          "x^2 - a*x + y^2 - b*y - c = 0"
+        ],
+        "given_roles": [
+          "coefficient",
+          "coefficient",
+          "constant"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "completion_of_the_square_required",
+          "side_equals_the_diameter",
+          "perimeter_asked"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 4,
+      "observed_notes": "section heading: Circles",
+      "structural_fingerprint": "053109b3bf52bfad",
+      "mathematical_fingerprint": "853862a0fb65f19e",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:value",
+        "con:completion_of_the_square_required",
+        "con:perimeter_asked",
+        "con:side_equals_the_diameter",
+        "dis:arithmetic_slip",
+        "dis:incomplete_reasoning",
+        "giv:coefficient",
+        "giv:constant",
+        "mech:hidden_step",
+        "mech:multiconcept",
+        "mech:trap_cost",
+        "obj:circle_in_general_form_inscribed_in_a_square",
+        "rel:v1^# - v2*v1 + v3^# - v4*v3 - v5 = #",
+        "rep:symbolic_algebraic",
+        "stim:none",
+        "tgt:value"
+      ],
+      "duplicate_group": "DG-0034"
+    },
+    {
+      "question_id": "Q-007-p3-q12",
+      "source_id": "S-007",
+      "source_file": "aaacabd4-Circles_50_REAL_QUESTION_WITH_ANS_KEY.pdf",
+      "source_page": 3,
+      "source_question_number": "12",
+      "source_block": "A",
+      "source_label": "Circles",
+      "source_administration": "March 2024",
+      "observed_topic": "circles",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "47 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a per-page handle watermark",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Circle",
+      "taxonomy_subtopics": [
+        "GEO_006",
+        "GEO_008"
+      ],
+      "knowledge_nodes": [
+        "N-CIRC",
+        "N-COORD"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "symbolic_algebraic",
+      "target_type": "parameter",
+      "archetype": "A-CIRC-SCALE-RADIUS",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "abstraction",
+          "load_bearing": true,
+          "counterfactual": "the printed constant is the radius squared, so a factor on the radius squares before it reaches the constant"
+        }
+      ],
+      "distractor_logic": [],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "student_produced_response",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "concentric_circle_with_a_transformed_radius"
+        ],
+        "relations": [
+          "(x - h)^2 + (y - k)^2 = r^2"
+        ],
+        "given_roles": [
+          "shift",
+          "shift",
+          "constant"
+        ],
+        "asked_role": "parameter",
+        "constraints": [
+          "same_centre",
+          "constant_stores_the_square",
+          "radius_doubled"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 2,
+      "observed_notes": "section heading: Circles",
+      "structural_fingerprint": "576b5ea0999de0ab",
+      "mathematical_fingerprint": "fb52b7992fe5fb2d",
+      "fingerprint_components": [
+        "ans:student_produced_response",
+        "ask:parameter",
+        "con:constant_stores_the_square",
+        "con:radius_doubled",
+        "con:same_centre",
+        "giv:constant",
+        "giv:shift",
+        "mech:abstraction",
+        "obj:concentric_circle_with_a_transformed_radius",
+        "rel:(v1 - v2)^# + (v3 - v4)^# = v5^#",
+        "rep:symbolic_algebraic",
+        "stim:none",
+        "tgt:parameter"
+      ],
+      "duplicate_group": "DG-0039"
+    },
+    {
+      "question_id": "Q-007-p4-q13",
+      "source_id": "S-007",
+      "source_file": "aaacabd4-Circles_50_REAL_QUESTION_WITH_ANS_KEY.pdf",
+      "source_page": 4,
+      "source_question_number": "13",
+      "source_block": "A",
+      "source_label": "Circles",
+      "source_administration": "May US 2024",
+      "observed_topic": "circles",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "47 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a per-page handle watermark",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Circle",
+      "taxonomy_subtopics": [
+        "GEO_006",
+        "GEO_008"
+      ],
+      "knowledge_nodes": [
+        "N-CIRC",
+        "N-COORD"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "symbolic_algebraic",
+      "target_type": "value",
+      "archetype": "A-CIRC-EQN-READ-FEATURE",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "trap_cost",
+          "load_bearing": true,
+          "counterfactual": "the printed shifts are the negatives of the coordinates, and both sign errors are printed"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "sign_error",
+          "wrong_route": "both centre coordinates copied with the printed sign"
+        },
+        {
+          "category": "sign_error",
+          "wrong_route": "one centre coordinate copied with the printed sign"
+        },
+        {
+          "category": "sign_error",
+          "wrong_route": "the other centre coordinate copied with the printed sign"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "circle_in_centre_radius_form"
+        ],
+        "relations": [
+          "(x - h)^2 + (y - k)^2 = r^2"
+        ],
+        "given_roles": [
+          "shift",
+          "shift",
+          "constant"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "centre_asked",
+          "both_signs_flipped_among_the_options"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 1,
+      "observed_notes": "section heading: Circles",
+      "structural_fingerprint": "ab1f47e6c459a50e",
+      "mathematical_fingerprint": "6009f74aac461b59",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:value",
+        "con:both_signs_flipped_among_the_options",
+        "con:centre_asked",
+        "dis:sign_error",
+        "giv:constant",
+        "giv:shift",
+        "mech:trap_cost",
+        "obj:circle_in_centre_radius_form",
+        "rel:(v1 - v2)^# + (v3 - v4)^# = v5^#",
+        "rep:symbolic_algebraic",
+        "stim:none",
+        "tgt:value"
+      ],
+      "duplicate_group": "DG-0038"
+    },
+    {
+      "question_id": "Q-007-p4-q14",
+      "source_id": "S-007",
+      "source_file": "aaacabd4-Circles_50_REAL_QUESTION_WITH_ANS_KEY.pdf",
+      "source_page": 4,
+      "source_question_number": "14",
+      "source_block": "A",
+      "source_label": "Circles",
+      "source_administration": "May 2024",
+      "observed_topic": "circles",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "47 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a per-page handle watermark",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Circle",
+      "taxonomy_subtopics": [
+        "GEO_006"
+      ],
+      "knowledge_nodes": [
+        "N-CIRC"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "verbal",
+      "target_type": "value",
+      "archetype": "A-CIRC-ARC-PARTITION",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "inference",
+          "load_bearing": true,
+          "counterfactual": "two diameters make opposite arcs equal, so four arcs collapse to two unknowns"
+        },
+        {
+          "id": "hidden_step",
+          "load_bearing": true,
+          "counterfactual": "the ratio applies across a half circle, not the whole one"
+        },
+        {
+          "id": "trap_cost",
+          "load_bearing": true,
+          "counterfactual": "a quarter of the circumference is printed"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "incomplete_reasoning",
+          "wrong_route": "a quarter of the circumference reported"
+        },
+        {
+          "category": "wrong_interpretation",
+          "wrong_route": "the ratio applied to the whole circumference"
+        },
+        {
+          "category": "reversal_error",
+          "wrong_route": "the other arc of the pair reported"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "two_diameters_partitioning_a_circle"
+        ],
+        "relations": [
+          "arc DA = k * arc AB",
+          "sum over a half circle"
+        ],
+        "given_roles": [
+          "circumference",
+          "ratio"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "two_diameters",
+          "opposite_arcs_equal",
+          "ratio_over_a_half_circle"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 4,
+      "observed_notes": "section heading: Circles",
+      "structural_fingerprint": "43c77db3af9a46a7",
+      "mathematical_fingerprint": "b8f0ebcca55a211d",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:value",
+        "con:opposite_arcs_equal",
+        "con:ratio_over_a_half_circle",
+        "con:two_diameters",
+        "dis:incomplete_reasoning",
+        "dis:reversal_error",
+        "dis:wrong_interpretation",
+        "giv:circumference",
+        "giv:ratio",
+        "mech:hidden_step",
+        "mech:inference",
+        "mech:trap_cost",
+        "obj:two_diameters_partitioning_a_circle",
+        "rel:arc DA = v1 * arc AB",
+        "rel:sum over v1 half circle",
+        "rep:verbal",
+        "stim:none",
+        "tgt:value"
+      ]
+    },
+    {
+      "question_id": "Q-007-p4-q15",
+      "source_id": "S-007",
+      "source_file": "aaacabd4-Circles_50_REAL_QUESTION_WITH_ANS_KEY.pdf",
+      "source_page": 4,
+      "source_question_number": "15",
+      "source_block": "A",
+      "source_label": "Circles",
+      "source_administration": "May 2024",
+      "observed_topic": "circles",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "47 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a per-page handle watermark",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Circle",
+      "taxonomy_subtopics": [
+        "GEO_006",
+        "GEO_005"
+      ],
+      "knowledge_nodes": [
+        "N-CIRC",
+        "N-TRIG"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "symbolic_algebraic",
+      "target_type": "value",
+      "archetype": "A-CIRC-UNIT-CIRCLE-COORD",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "hidden_step",
+          "load_bearing": true,
+          "counterfactual": "the angle must be reduced modulo a full turn before any coordinate can be read"
+        },
+        {
+          "id": "trap_cost",
+          "load_bearing": true,
+          "counterfactual": "the other coordinate and both sign flips are printed"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "sign_error",
+          "wrong_route": "the reference value with the wrong sign"
+        },
+        {
+          "category": "reversal_error",
+          "wrong_route": "the other coordinate reported"
+        },
+        {
+          "category": "sign_error",
+          "wrong_route": "the other coordinate with the wrong sign"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "unit_circle_point_at_a_large_angle"
+        ],
+        "relations": [
+          "angle = p*pi/q",
+          "point (a, b) on the unit circle"
+        ],
+        "given_roles": [
+          "angle_measure",
+          "reference_point"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "angle_exceeds_a_full_turn",
+          "modular_reduction_first",
+          "one_coordinate_asked"
+        ]
+      },
+      "conflicts": [
+        "TOPIC_CLASSIFICATION_CONFLICT",
+        "KDG_MAPPING_CONFLICT"
+      ],
+      "ingested_on": "2026-09-05",
+      "step_count": 3,
+      "observed_notes": "section heading: Circles",
+      "structural_fingerprint": "74f35acab63f041a",
+      "mathematical_fingerprint": "e95fdcd33c1115a5",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:value",
+        "con:angle_exceeds_a_full_turn",
+        "con:modular_reduction_first",
+        "con:one_coordinate_asked",
+        "dis:reversal_error",
+        "dis:sign_error",
+        "giv:angle_measure",
+        "giv:reference_point",
+        "mech:hidden_step",
+        "mech:trap_cost",
+        "obj:unit_circle_point_at_a_large_angle",
+        "rel:angle = v1*pi/v2",
+        "rel:point (v1, v2) on the unit circle",
+        "rep:symbolic_algebraic",
+        "stim:none",
+        "tgt:value"
+      ]
+    },
+    {
+      "question_id": "Q-007-p4-q16",
+      "source_id": "S-007",
+      "source_file": "aaacabd4-Circles_50_REAL_QUESTION_WITH_ANS_KEY.pdf",
+      "source_page": 4,
+      "source_question_number": "16",
+      "source_block": "A",
+      "source_label": "Circles",
+      "source_administration": "May 2024",
+      "observed_topic": "circles",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "47 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a per-page handle watermark",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Circle",
+      "taxonomy_subtopics": [
+        "GEO_006",
+        "GEO_008"
+      ],
+      "knowledge_nodes": [
+        "N-CIRC",
+        "N-COORD"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "symbolic_algebraic",
+      "target_type": "value",
+      "archetype": "A-CIRC-TANGENT-SLOPE",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "inference",
+          "load_bearing": true,
+          "counterfactual": "the tangent is perpendicular to the radius, which is the only fact the item needs"
+        },
+        {
+          "id": "trap_cost",
+          "load_bearing": true,
+          "counterfactual": "the radius slope, its reciprocal and its negation are all printed"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "incomplete_reasoning",
+          "wrong_route": "the radius slope reported"
+        },
+        {
+          "category": "reversal_error",
+          "wrong_route": "the reciprocal taken without negating"
+        },
+        {
+          "category": "sign_error",
+          "wrong_route": "the negation taken without inverting"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "circle_with_a_tangent_at_a_named_point"
+        ],
+        "relations": [
+          "centre (h, k)",
+          "point of tangency (p, q)"
+        ],
+        "given_roles": [
+          "centre",
+          "point"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "perpendicular_radius",
+          "integer_slope",
+          "no_equation_given"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 2,
+      "observed_notes": "section heading: Circles",
+      "structural_fingerprint": "ccd13e92463333fb",
+      "mathematical_fingerprint": "75b85c732169de20",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:value",
+        "con:integer_slope",
+        "con:no_equation_given",
+        "con:perpendicular_radius",
+        "dis:incomplete_reasoning",
+        "dis:reversal_error",
+        "dis:sign_error",
+        "giv:centre",
+        "giv:point",
+        "mech:inference",
+        "mech:trap_cost",
+        "obj:circle_with_a_tangent_at_a_named_point",
+        "rel:centre (v1, v2)",
+        "rel:point of tangency (v1, v2)",
+        "rep:symbolic_algebraic",
+        "stim:none",
+        "tgt:value"
+      ],
+      "duplicate_group": "DG-0037"
+    },
+    {
+      "question_id": "Q-007-p5-q17",
+      "source_id": "S-007",
+      "source_file": "aaacabd4-Circles_50_REAL_QUESTION_WITH_ANS_KEY.pdf",
+      "source_page": 5,
+      "source_question_number": "17",
+      "source_block": "A",
+      "source_label": "Circles",
+      "source_administration": "June 2024",
+      "observed_topic": "circles",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "47 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a per-page handle watermark",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Circle",
+      "taxonomy_subtopics": [
+        "GEO_006",
+        "GEO_008"
+      ],
+      "knowledge_nodes": [
+        "N-CIRC",
+        "N-COORD"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "symbolic_algebraic",
+      "target_type": "value",
+      "archetype": "A-CIRC-GENERAL-FORM-FEATURE",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "hidden_step",
+          "load_bearing": true,
+          "counterfactual": "the equation must be completed to standard form before any length exists"
+        },
+        {
+          "id": "multiconcept",
+          "load_bearing": true,
+          "counterfactual": "a completion of the square feeds a geometric relation between circle and square"
+        },
+        {
+          "id": "trap_cost",
+          "load_bearing": true,
+          "counterfactual": "the perimeter built from the radius rather than the diameter is printed"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "incomplete_reasoning",
+          "wrong_route": "the perimeter built from the radius instead of the diameter"
+        },
+        {
+          "category": "arithmetic_slip",
+          "wrong_route": "the radius taken as the unrooted constant"
+        },
+        {
+          "category": "incomplete_reasoning",
+          "wrong_route": "the side reported instead of the perimeter"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "circle_in_general_form_inscribed_in_a_square"
+        ],
+        "relations": [
+          "x^2 - a*x + y^2 - b*y - c = 0"
+        ],
+        "given_roles": [
+          "coefficient",
+          "coefficient",
+          "constant"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "completion_of_the_square_required",
+          "side_equals_the_diameter",
+          "perimeter_asked"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 4,
+      "observed_notes": "section heading: Circles",
+      "structural_fingerprint": "053109b3bf52bfad",
+      "mathematical_fingerprint": "853862a0fb65f19e",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:value",
+        "con:completion_of_the_square_required",
+        "con:perimeter_asked",
+        "con:side_equals_the_diameter",
+        "dis:arithmetic_slip",
+        "dis:incomplete_reasoning",
+        "giv:coefficient",
+        "giv:constant",
+        "mech:hidden_step",
+        "mech:multiconcept",
+        "mech:trap_cost",
+        "obj:circle_in_general_form_inscribed_in_a_square",
+        "rel:v1^# - v2*v1 + v3^# - v4*v3 - v5 = #",
+        "rep:symbolic_algebraic",
+        "stim:none",
+        "tgt:value"
+      ],
+      "duplicate_group": "DG-0034"
+    },
+    {
+      "question_id": "Q-007-p5-q18",
+      "source_id": "S-007",
+      "source_file": "aaacabd4-Circles_50_REAL_QUESTION_WITH_ANS_KEY.pdf",
+      "source_page": 5,
+      "source_question_number": "18",
+      "source_block": "A",
+      "source_label": "Circles",
+      "source_administration": "June 2024",
+      "observed_topic": "circles",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "47 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a per-page handle watermark",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Circle",
+      "taxonomy_subtopics": [
+        "GEO_006",
+        "GEO_005"
+      ],
+      "knowledge_nodes": [
+        "N-CIRC",
+        "N-TRIG"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "symbolic_algebraic",
+      "target_type": "value",
+      "archetype": "A-CIRC-UNIT-CIRCLE-ANGLE",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "abstraction",
+          "load_bearing": true,
+          "counterfactual": "the terminal point is on an axis, so the answer is a parity condition rather than a computation"
+        },
+        {
+          "id": "option_testing",
+          "load_bearing": true,
+          "counterfactual": "each printed measure must be tested for the right parity of half turns"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "wrong_interpretation",
+          "wrong_route": "an even multiple of the half turn accepted"
+        },
+        {
+          "category": "wrong_interpretation",
+          "wrong_route": "a whole multiple of the full turn accepted"
+        },
+        {
+          "category": "arithmetic_slip",
+          "wrong_route": "a measure off by one half turn"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "unit_circle_with_a_terminal_point_on_an_axis"
+        ],
+        "relations": [
+          "point (1, 0)",
+          "point (-1, y)"
+        ],
+        "given_roles": [
+          "reference_point",
+          "terminal_point"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "angle_exceeds_a_full_turn",
+          "parity_of_half_turns_decides",
+          "radian_measure"
+        ]
+      },
+      "conflicts": [
+        "TOPIC_CLASSIFICATION_CONFLICT",
+        "KDG_MAPPING_CONFLICT"
+      ],
+      "ingested_on": "2026-09-05",
+      "step_count": 3,
+      "observed_notes": "section heading: Circles",
+      "structural_fingerprint": "a1fac04f8b88a2d8",
+      "mathematical_fingerprint": "90dacd281f1e9252",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:value",
+        "con:angle_exceeds_a_full_turn",
+        "con:parity_of_half_turns_decides",
+        "con:radian_measure",
+        "dis:arithmetic_slip",
+        "dis:wrong_interpretation",
+        "giv:reference_point",
+        "giv:terminal_point",
+        "mech:abstraction",
+        "mech:option_testing",
+        "obj:unit_circle_with_a_terminal_point_on_an_axis",
+        "rel:point (#, #)",
+        "rel:point (-#, v1)",
+        "rep:symbolic_algebraic",
+        "stim:none",
+        "tgt:value"
+      ],
+      "duplicate_group": "DG-0040"
+    },
+    {
+      "question_id": "Q-007-p5-q19",
+      "source_id": "S-007",
+      "source_file": "aaacabd4-Circles_50_REAL_QUESTION_WITH_ANS_KEY.pdf",
+      "source_page": 5,
+      "source_question_number": "19",
+      "source_block": "A",
+      "source_label": "Circles",
+      "source_administration": "June 2024",
+      "observed_topic": "circles",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "47 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a per-page handle watermark",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Circle",
+      "taxonomy_subtopics": [
+        "GEO_006",
+        "GEO_005"
+      ],
+      "knowledge_nodes": [
+        "N-CIRC",
+        "N-TRIG"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "symbolic_algebraic",
+      "target_type": "value",
+      "archetype": "A-CIRC-UNIT-CIRCLE-ANGLE",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "abstraction",
+          "load_bearing": true,
+          "counterfactual": "the terminal point is on an axis, so the answer is a parity condition rather than a computation"
+        },
+        {
+          "id": "option_testing",
+          "load_bearing": true,
+          "counterfactual": "each printed measure must be tested for the right parity of half turns"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "wrong_interpretation",
+          "wrong_route": "an even multiple of the half turn accepted"
+        },
+        {
+          "category": "wrong_interpretation",
+          "wrong_route": "a whole multiple of the full turn accepted"
+        },
+        {
+          "category": "arithmetic_slip",
+          "wrong_route": "a measure off by one half turn"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "unit_circle_with_a_terminal_point_on_an_axis"
+        ],
+        "relations": [
+          "point (1, 0)",
+          "point (-1, y)"
+        ],
+        "given_roles": [
+          "reference_point",
+          "terminal_point"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "angle_exceeds_a_full_turn",
+          "parity_of_half_turns_decides",
+          "radian_measure"
+        ]
+      },
+      "conflicts": [
+        "TOPIC_CLASSIFICATION_CONFLICT",
+        "KDG_MAPPING_CONFLICT"
+      ],
+      "ingested_on": "2026-09-05",
+      "step_count": 3,
+      "observed_notes": "section heading: Circles",
+      "structural_fingerprint": "a1fac04f8b88a2d8",
+      "mathematical_fingerprint": "90dacd281f1e9252",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:value",
+        "con:angle_exceeds_a_full_turn",
+        "con:parity_of_half_turns_decides",
+        "con:radian_measure",
+        "dis:arithmetic_slip",
+        "dis:wrong_interpretation",
+        "giv:reference_point",
+        "giv:terminal_point",
+        "mech:abstraction",
+        "mech:option_testing",
+        "obj:unit_circle_with_a_terminal_point_on_an_axis",
+        "rel:point (#, #)",
+        "rel:point (-#, v1)",
+        "rep:symbolic_algebraic",
+        "stim:none",
+        "tgt:value"
+      ],
+      "duplicate_group": "DG-0040"
+    },
+    {
+      "question_id": "Q-007-p5-q20",
+      "source_id": "S-007",
+      "source_file": "aaacabd4-Circles_50_REAL_QUESTION_WITH_ANS_KEY.pdf",
+      "source_page": 5,
+      "source_question_number": "20",
+      "source_block": "A",
+      "source_label": "Circles",
+      "source_administration": "August US 2024",
+      "observed_topic": "circles",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "47 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a per-page handle watermark",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Circle",
+      "taxonomy_subtopics": [
+        "GEO_006",
+        "GEO_008"
+      ],
+      "knowledge_nodes": [
+        "N-CIRC",
+        "N-COORD"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "symbolic_algebraic",
+      "target_type": "equation",
+      "archetype": "A-CIRC-TRANSLATE-AND-SCALE",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "multiconcept",
+          "load_bearing": true,
+          "counterfactual": "a translation in two directions and a scaling of the radius are applied at once"
+        },
+        {
+          "id": "abstraction",
+          "load_bearing": true,
+          "counterfactual": "the multiplier is stated on the diameter, applies to the radius, and then squares"
+        },
+        {
+          "id": "trap_cost",
+          "load_bearing": true,
+          "counterfactual": "the option set crosses the two centre choices with the two constant choices"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "sign_error",
+          "wrong_route": "the translation applied in the wrong directions"
+        },
+        {
+          "category": "arithmetic_slip",
+          "wrong_route": "the stored constant doubled rather than quadrupled"
+        },
+        {
+          "category": "arithmetic_slip",
+          "wrong_route": "the wrong centre with the wrong constant"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "circle_translated_and_resized"
+        ],
+        "relations": [
+          "(x - h)^2 + (y - k)^2 = r^2"
+        ],
+        "given_roles": [
+          "shift",
+          "shift",
+          "constant",
+          "translation",
+          "multiplier"
+        ],
+        "asked_role": "equation",
+        "constraints": [
+          "translation_in_both_directions",
+          "multiplier_stated_on_the_diameter",
+          "constant_stores_the_square"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 4,
+      "observed_notes": "section heading: Circles",
+      "structural_fingerprint": "565ae5ae5642b1b6",
+      "mathematical_fingerprint": "6629cb1b117439f1",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:equation",
+        "con:constant_stores_the_square",
+        "con:multiplier_stated_on_the_diameter",
+        "con:translation_in_both_directions",
+        "dis:arithmetic_slip",
+        "dis:sign_error",
+        "giv:constant",
+        "giv:multiplier",
+        "giv:shift",
+        "giv:translation",
+        "mech:abstraction",
+        "mech:multiconcept",
+        "mech:trap_cost",
+        "obj:circle_translated_and_resized",
+        "rel:(v1 - v2)^# + (v3 - v4)^# = v5^#",
+        "rep:symbolic_algebraic",
+        "stim:none",
+        "tgt:equation"
+      ]
+    },
+    {
+      "question_id": "Q-007-p6-q21",
+      "source_id": "S-007",
+      "source_file": "aaacabd4-Circles_50_REAL_QUESTION_WITH_ANS_KEY.pdf",
+      "source_page": 6,
+      "source_question_number": "21",
+      "source_block": "A",
+      "source_label": "Circles",
+      "source_administration": "August US 2024",
+      "observed_topic": "circles",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "47 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a per-page handle watermark",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Circle",
+      "taxonomy_subtopics": [
+        "GEO_006"
+      ],
+      "knowledge_nodes": [
+        "N-CIRC"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "verbal",
+      "target_type": "value",
+      "archetype": "A-CIRC-AREA-RATIO",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "abstraction",
+          "load_bearing": true,
+          "counterfactual": "the shared symbol cancels, so the answer is a pure number however the radii are written"
+        },
+        {
+          "id": "trap_cost",
+          "load_bearing": true,
+          "counterfactual": "the unsquared ratio is the natural stopping point"
+        }
+      ],
+      "distractor_logic": [],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "student_produced_response",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "two_circles_with_symbolic_radii"
+        ],
+        "relations": [
+          "r_A = a*z",
+          "r_B = b*z"
+        ],
+        "given_roles": [
+          "coefficient",
+          "coefficient",
+          "symbol"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "shared_symbol_cancels",
+          "ratio_must_be_squared",
+          "no_units"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 2,
+      "observed_notes": "section heading: Circles",
+      "structural_fingerprint": "e5998212f15a3202",
+      "mathematical_fingerprint": "2b9f05c966815d96",
+      "fingerprint_components": [
+        "ans:student_produced_response",
+        "ask:value",
+        "con:no_units",
+        "con:ratio_must_be_squared",
+        "con:shared_symbol_cancels",
+        "giv:coefficient",
+        "giv:symbol",
+        "mech:abstraction",
+        "mech:trap_cost",
+        "obj:two_circles_with_symbolic_radii",
+        "rel:v1_v2 = v3*v4",
+        "rep:verbal",
+        "stim:none",
+        "tgt:value"
+      ],
+      "duplicate_group": "DG-0041"
+    },
+    {
+      "question_id": "Q-007-p6-q22",
+      "source_id": "S-007",
+      "source_file": "aaacabd4-Circles_50_REAL_QUESTION_WITH_ANS_KEY.pdf",
+      "source_page": 6,
+      "source_question_number": "22",
+      "source_block": "A",
+      "source_label": "Circles",
+      "source_administration": "August US 2024",
+      "observed_topic": "circles",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "47 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a per-page handle watermark",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Circle",
+      "taxonomy_subtopics": [
+        "GEO_006",
+        "GEO_008"
+      ],
+      "knowledge_nodes": [
+        "N-CIRC",
+        "N-COORD"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "symbolic_algebraic",
+      "target_type": "value",
+      "archetype": "A-CIRC-DIAMETER-ENDPOINTS",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "inference",
+          "load_bearing": true,
+          "counterfactual": "both endpoints share an abscissa, so the diameter is vertical and only the ordinate moves"
+        },
+        {
+          "id": "reversal",
+          "load_bearing": true,
+          "counterfactual": "the centre is read from the equation and used as a midpoint in reverse"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "wrong_interpretation",
+          "wrong_route": "the centre ordinate reported"
+        },
+        {
+          "category": "arithmetic_slip",
+          "wrong_route": "the gap between endpoint and centre reported"
+        },
+        {
+          "category": "sign_error",
+          "wrong_route": "the endpoint reflected the wrong way"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "circle_with_a_diameter_between_two_named_points"
+        ],
+        "relations": [
+          "(x - a)^2 + (y - k)^2 = r^2"
+        ],
+        "given_roles": [
+          "endpoint",
+          "centre"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "shared_abscissa",
+          "vertical_diameter",
+          "midpoint_used_in_reverse"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 3,
+      "observed_notes": "section heading: Circles",
+      "structural_fingerprint": "3aad90d63b216828",
+      "mathematical_fingerprint": "323b4b345f99d917",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:value",
+        "con:midpoint_used_in_reverse",
+        "con:shared_abscissa",
+        "con:vertical_diameter",
+        "dis:arithmetic_slip",
+        "dis:sign_error",
+        "dis:wrong_interpretation",
+        "giv:centre",
+        "giv:endpoint",
+        "mech:inference",
+        "mech:reversal",
+        "obj:circle_with_a_diameter_between_two_named_points",
+        "rel:(v1 - v2)^# + (v3 - v4)^# = v5^#",
+        "rep:symbolic_algebraic",
+        "stim:none",
+        "tgt:value"
+      ]
+    },
+    {
+      "question_id": "Q-007-p6-q23",
+      "source_id": "S-007",
+      "source_file": "aaacabd4-Circles_50_REAL_QUESTION_WITH_ANS_KEY.pdf",
+      "source_page": 6,
+      "source_question_number": "23",
+      "source_block": "A",
+      "source_label": "Circles",
+      "source_administration": "October US 2024",
+      "observed_topic": "circles",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "47 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a per-page handle watermark",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Circle",
+      "taxonomy_subtopics": [
+        "GEO_006",
+        "GEO_008"
+      ],
+      "knowledge_nodes": [
+        "N-CIRC",
+        "N-COORD"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "symbolic_algebraic",
+      "target_type": "equation",
+      "archetype": "A-CIRC-TRANSLATE",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "trap_cost",
+          "load_bearing": true,
+          "counterfactual": "the options move the other coordinate, move the right one the wrong way, and change the radius"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "wrong_interpretation",
+          "wrong_route": "the other coordinate translated"
+        },
+        {
+          "category": "sign_error",
+          "wrong_route": "the shift applied in the wrong direction"
+        },
+        {
+          "category": "wrong_interpretation",
+          "wrong_route": "the radius changed by the translation"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "circle_translated_in_one_direction"
+        ],
+        "relations": [
+          "(x - h)^2 + (y - k)^2 = r^2"
+        ],
+        "given_roles": [
+          "shift",
+          "shift",
+          "constant",
+          "translation"
+        ],
+        "asked_role": "equation",
+        "constraints": [
+          "horizontal_translation_only",
+          "radius_unchanged"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 2,
+      "observed_notes": "section heading: Circles",
+      "structural_fingerprint": "3f2404a53cce9e4c",
+      "mathematical_fingerprint": "3a0fd3bf927eb1de",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:equation",
+        "con:horizontal_translation_only",
+        "con:radius_unchanged",
+        "dis:sign_error",
+        "dis:wrong_interpretation",
+        "giv:constant",
+        "giv:shift",
+        "giv:translation",
+        "mech:trap_cost",
+        "obj:circle_translated_in_one_direction",
+        "rel:(v1 - v2)^# + (v3 - v4)^# = v5^#",
+        "rep:symbolic_algebraic",
+        "stim:none",
+        "tgt:equation"
+      ],
+      "duplicate_group": "DG-0035"
+    },
+    {
+      "question_id": "Q-007-p6-q24",
+      "source_id": "S-007",
+      "source_file": "aaacabd4-Circles_50_REAL_QUESTION_WITH_ANS_KEY.pdf",
+      "source_page": 6,
+      "source_question_number": "24",
+      "source_block": "A",
+      "source_label": "Circles",
+      "source_administration": "October US 2024",
+      "observed_topic": "circles",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "47 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a per-page handle watermark",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Circle",
+      "taxonomy_subtopics": [
+        "GEO_006",
+        "GEO_008"
+      ],
+      "knowledge_nodes": [
+        "N-CIRC",
+        "N-COORD"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "symbolic_algebraic",
+      "target_type": "value",
+      "archetype": "A-CIRC-POINT-ON-CIRCLE",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "inference",
+          "load_bearing": true,
+          "counterfactual": "a coordinate is possible exactly when it lies within one radius of the centre, so the test is an interval"
+        },
+        {
+          "id": "trap_cost",
+          "load_bearing": true,
+          "counterfactual": "a value one radius-squared from the centre is printed"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "arithmetic_slip",
+          "wrong_route": "a value one radius-squared from the centre"
+        },
+        {
+          "category": "sign_error",
+          "wrong_route": "the radius applied in the wrong direction"
+        },
+        {
+          "category": "wrong_interpretation",
+          "wrong_route": "a value taken from the other coordinate s range"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "circle_with_one_coordinate_of_a_point_asked"
+        ],
+        "relations": [
+          "(x - h)^2 + (y - k)^2 = r^2"
+        ],
+        "given_roles": [
+          "shift",
+          "shift",
+          "constant"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "possible_value_wording",
+          "interval_argument",
+          "large_radius"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 3,
+      "observed_notes": "section heading: Circles",
+      "structural_fingerprint": "5ee32a85edb5c12d",
+      "mathematical_fingerprint": "231e3ae61b5f28ee",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:value",
+        "con:interval_argument",
+        "con:large_radius",
+        "con:possible_value_wording",
+        "dis:arithmetic_slip",
+        "dis:sign_error",
+        "dis:wrong_interpretation",
+        "giv:constant",
+        "giv:shift",
+        "mech:inference",
+        "mech:trap_cost",
+        "obj:circle_with_one_coordinate_of_a_point_asked",
+        "rel:(v1 - v2)^# + (v3 - v4)^# = v5^#",
+        "rep:symbolic_algebraic",
+        "stim:none",
+        "tgt:value"
+      ]
+    },
+    {
+      "question_id": "Q-007-p7-q25",
+      "source_id": "S-007",
+      "source_file": "aaacabd4-Circles_50_REAL_QUESTION_WITH_ANS_KEY.pdf",
+      "source_page": 7,
+      "source_question_number": "25",
+      "source_block": "A",
+      "source_label": "Circles",
+      "source_administration": "October 2024",
+      "observed_topic": "circles",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "47 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a per-page handle watermark",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Circle",
+      "taxonomy_subtopics": [
+        "GEO_006",
+        "GEO_008"
+      ],
+      "knowledge_nodes": [
+        "N-CIRC",
+        "N-COORD"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "symbolic_algebraic",
+      "target_type": "equation",
+      "archetype": "A-CIRC-BUILD-FROM-CENTER-RADIUS",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "trap_cost",
+          "load_bearing": true,
+          "counterfactual": "squaring a product squares both factors, and the options square each one alone"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "incomplete_reasoning",
+          "wrong_route": "only the numeric factor of the radius squared"
+        },
+        {
+          "category": "incomplete_reasoning",
+          "wrong_route": "only the symbolic factor squared"
+        },
+        {
+          "category": "incomplete_reasoning",
+          "wrong_route": "neither factor squared"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "circle_from_centre_and_a_symbolic_radius"
+        ],
+        "relations": [
+          "(x - h)^2 + (y - k)^2 = (a*k)^2"
+        ],
+        "given_roles": [
+          "centre",
+          "coefficient",
+          "symbol"
+        ],
+        "asked_role": "equation",
+        "constraints": [
+          "radius_is_a_product",
+          "both_factors_must_square",
+          "options_split_the_square"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 2,
+      "observed_notes": "section heading: Circles",
+      "structural_fingerprint": "7fb0700baf3d97b4",
+      "mathematical_fingerprint": "e496fb9d941cd01f",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:equation",
+        "con:both_factors_must_square",
+        "con:options_split_the_square",
+        "con:radius_is_a_product",
+        "dis:incomplete_reasoning",
+        "giv:centre",
+        "giv:coefficient",
+        "giv:symbol",
+        "mech:trap_cost",
+        "obj:circle_from_centre_and_a_symbolic_radius",
+        "rel:(v1 - v2)^# + (v3 - v4)^# = (v5*v4)^#",
+        "rep:symbolic_algebraic",
+        "stim:none",
+        "tgt:equation"
+      ],
+      "duplicate_group": "DG-0042"
+    },
+    {
+      "question_id": "Q-007-p7-q26",
+      "source_id": "S-007",
+      "source_file": "aaacabd4-Circles_50_REAL_QUESTION_WITH_ANS_KEY.pdf",
+      "source_page": 7,
+      "source_question_number": "26",
+      "source_block": "A",
+      "source_label": "Circles",
+      "source_administration": "November 2024",
+      "observed_topic": "circles",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "47 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a per-page handle watermark",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Circle",
+      "taxonomy_subtopics": [
+        "GEO_006"
+      ],
+      "knowledge_nodes": [
+        "N-CIRC"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "verbal",
+      "target_type": "value",
+      "archetype": "A-CIRC-ARC-DEGREE-CIRCUMFERENCE",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "trap_cost",
+          "load_bearing": true,
+          "counterfactual": "the arc length itself is printed, and so are scalings by the wrong factor"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "incomplete_reasoning",
+          "wrong_route": "the arc length reported unscaled"
+        },
+        {
+          "category": "arithmetic_slip",
+          "wrong_route": "scaled by half the correct factor"
+        },
+        {
+          "category": "arithmetic_slip",
+          "wrong_route": "scaled by the degree measure itself"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "arc_with_a_stated_degree_measure"
+        ],
+        "relations": [
+          "arc = C * (theta / full_turn)"
+        ],
+        "given_roles": [
+          "arc_length",
+          "angle_measure"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "degrees_not_radians",
+          "proportion_in_one_step",
+          "circumference_asked"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 2,
+      "observed_notes": "section heading: Circles",
+      "structural_fingerprint": "e655f32e9f7deaed",
+      "mathematical_fingerprint": "2c863cb549ae92b1",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:value",
+        "con:circumference_asked",
+        "con:degrees_not_radians",
+        "con:proportion_in_one_step",
+        "dis:arithmetic_slip",
+        "dis:incomplete_reasoning",
+        "giv:angle_measure",
+        "giv:arc_length",
+        "mech:trap_cost",
+        "obj:arc_with_a_stated_degree_measure",
+        "rel:arc = v1 * (theta / full_turn)",
+        "rep:verbal",
+        "stim:none",
+        "tgt:value"
+      ],
+      "duplicate_group": "DG-0043"
+    },
+    {
+      "question_id": "Q-007-p7-q27",
+      "source_id": "S-007",
+      "source_file": "aaacabd4-Circles_50_REAL_QUESTION_WITH_ANS_KEY.pdf",
+      "source_page": 7,
+      "source_question_number": "27",
+      "source_block": "A",
+      "source_label": "Circles",
+      "source_administration": "November US 2024",
+      "observed_topic": "circles",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "47 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a per-page handle watermark",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Circle",
+      "taxonomy_subtopics": [
+        "GEO_006",
+        "GEO_008"
+      ],
+      "knowledge_nodes": [
+        "N-CIRC",
+        "N-COORD"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "symbolic_algebraic",
+      "target_type": "value",
+      "archetype": "A-CIRC-EQN-READ-FEATURE",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "trap_cost",
+          "load_bearing": true,
+          "counterfactual": "the printed shifts are the negatives of the coordinates, and both sign errors are printed"
+        }
+      ],
+      "distractor_logic": [],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "student_produced_response",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "circle_in_centre_radius_form"
+        ],
+        "relations": [
+          "(x - h)^2 + (y - k)^2 = r^2"
+        ],
+        "given_roles": [
+          "shift",
+          "shift",
+          "constant"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "radius_asked",
+          "constant_is_a_perfect_square"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 1,
+      "observed_notes": "section heading: Circles",
+      "structural_fingerprint": "ab44a446ed41d98d",
+      "mathematical_fingerprint": "28217a625d9a125b",
+      "fingerprint_components": [
+        "ans:student_produced_response",
+        "ask:value",
+        "con:constant_is_a_perfect_square",
+        "con:radius_asked",
+        "giv:constant",
+        "giv:shift",
+        "mech:trap_cost",
+        "obj:circle_in_centre_radius_form",
+        "rel:(v1 - v2)^# + (v3 - v4)^# = v5^#",
+        "rep:symbolic_algebraic",
+        "stim:none",
+        "tgt:value"
+      ]
+    },
+    {
+      "question_id": "Q-007-p7-q28",
+      "source_id": "S-007",
+      "source_file": "aaacabd4-Circles_50_REAL_QUESTION_WITH_ANS_KEY.pdf",
+      "source_page": 7,
+      "source_question_number": "28",
+      "source_block": "A",
+      "source_label": "Circles",
+      "source_administration": "October US 2024",
+      "observed_topic": "circles",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "47 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a per-page handle watermark",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Circle",
+      "taxonomy_subtopics": [
+        "GEO_006",
+        "GEO_008"
+      ],
+      "knowledge_nodes": [
+        "N-CIRC",
+        "N-COORD"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "symbolic_algebraic",
+      "target_type": "parameter",
+      "archetype": "A-CIRC-SCALE-RADIUS",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "abstraction",
+          "load_bearing": true,
+          "counterfactual": "the printed constant is the radius squared, so a factor on the radius squares before it reaches the constant"
+        }
+      ],
+      "distractor_logic": [],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "student_produced_response",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "concentric_circle_with_a_transformed_radius"
+        ],
+        "relations": [
+          "(x - h)^2 + (y - k)^2 = r^2"
+        ],
+        "given_roles": [
+          "shift",
+          "shift",
+          "constant"
+        ],
+        "asked_role": "parameter",
+        "constraints": [
+          "same_centre",
+          "constant_stores_the_square",
+          "radius_doubled"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 2,
+      "observed_notes": "section heading: Circles",
+      "structural_fingerprint": "576b5ea0999de0ab",
+      "mathematical_fingerprint": "fb52b7992fe5fb2d",
+      "fingerprint_components": [
+        "ans:student_produced_response",
+        "ask:parameter",
+        "con:constant_stores_the_square",
+        "con:radius_doubled",
+        "con:same_centre",
+        "giv:constant",
+        "giv:shift",
+        "mech:abstraction",
+        "obj:concentric_circle_with_a_transformed_radius",
+        "rel:(v1 - v2)^# + (v3 - v4)^# = v5^#",
+        "rep:symbolic_algebraic",
+        "stim:none",
+        "tgt:parameter"
+      ],
+      "duplicate_group": "DG-0039"
+    },
+    {
+      "question_id": "Q-007-p8-q29",
+      "source_id": "S-007",
+      "source_file": "aaacabd4-Circles_50_REAL_QUESTION_WITH_ANS_KEY.pdf",
+      "source_page": 8,
+      "source_question_number": "29",
+      "source_block": "A",
+      "source_label": "Circles",
+      "source_administration": "November US 2024",
+      "observed_topic": "circles",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "47 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a per-page handle watermark",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Circle",
+      "taxonomy_subtopics": [
+        "GEO_006",
+        "GEO_008"
+      ],
+      "knowledge_nodes": [
+        "N-CIRC",
+        "N-COORD"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "symbolic_algebraic",
+      "target_type": "parameter",
+      "archetype": "A-CIRC-TANGENT-POINT",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "reversal",
+          "load_bearing": true,
+          "counterfactual": "the perpendicularity runs from the tangent back to the radius, the opposite of the usual direction"
+        },
+        {
+          "id": "multiconcept",
+          "load_bearing": true,
+          "counterfactual": "a negative reciprocal and a point-slope equation are chained"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "reversal_error",
+          "wrong_route": "the tangent slope used for the radius"
+        },
+        {
+          "category": "sign_error",
+          "wrong_route": "the reciprocal taken without negating"
+        },
+        {
+          "category": "arithmetic_slip",
+          "wrong_route": "the point-slope equation solved with a sign slip"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "circle_with_a_tangent_of_known_slope"
+        ],
+        "relations": [
+          "centre (h, k)",
+          "tangent slope m",
+          "contact point (a, q)"
+        ],
+        "given_roles": [
+          "centre",
+          "slope",
+          "coordinate"
+        ],
+        "asked_role": "parameter",
+        "constraints": [
+          "perpendicularity_used_backwards",
+          "fractional_slope",
+          "fractional_options"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 4,
+      "observed_notes": "section heading: Circles",
+      "structural_fingerprint": "8b881ab3d960ef8d",
+      "mathematical_fingerprint": "fd99ce4d819625aa",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:parameter",
+        "con:fractional_options",
+        "con:fractional_slope",
+        "con:perpendicularity_used_backwards",
+        "dis:arithmetic_slip",
+        "dis:reversal_error",
+        "dis:sign_error",
+        "giv:centre",
+        "giv:coordinate",
+        "giv:slope",
+        "mech:multiconcept",
+        "mech:reversal",
+        "obj:circle_with_a_tangent_of_known_slope",
+        "rel:centre (v1, v2)",
+        "rel:contact point (v1, v2)",
+        "rel:tangent slope v1",
+        "rep:symbolic_algebraic",
+        "stim:none",
+        "tgt:parameter"
+      ]
+    },
+    {
+      "question_id": "Q-007-p8-q30",
+      "source_id": "S-007",
+      "source_file": "aaacabd4-Circles_50_REAL_QUESTION_WITH_ANS_KEY.pdf",
+      "source_page": 8,
+      "source_question_number": "30",
+      "source_block": "A",
+      "source_label": "Circles",
+      "source_administration": "December US 2024",
+      "observed_topic": "circles",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "47 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a per-page handle watermark",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Circle",
+      "taxonomy_subtopics": [
+        "GEO_006",
+        "GEO_008"
+      ],
+      "knowledge_nodes": [
+        "N-CIRC",
+        "N-COORD"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "symbolic_algebraic",
+      "target_type": "parameter",
+      "archetype": "A-CIRC-POINT-ON-CIRCLE",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "nonobvious_relationship",
+          "load_bearing": true,
+          "counterfactual": "the given abscissa is exactly one radius from the centre, so the point is on the horizontal extreme and the ordinate is the centre s"
+        }
+      ],
+      "distractor_logic": [],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "student_produced_response",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "circle_with_a_point_at_the_horizontal_extreme"
+        ],
+        "relations": [
+          "(x - h)^2 + (y - k)^2 = r^2"
+        ],
+        "given_roles": [
+          "shift",
+          "shift",
+          "constant",
+          "coordinate"
+        ],
+        "asked_role": "parameter",
+        "constraints": [
+          "point_at_a_horizontal_extreme",
+          "ordinate_equals_the_centre",
+          "no_quadratic_needed"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 2,
+      "observed_notes": "section heading: Circles",
+      "structural_fingerprint": "743008f5046a8723",
+      "mathematical_fingerprint": "f91c3f6dc83e7fc0",
+      "fingerprint_components": [
+        "ans:student_produced_response",
+        "ask:parameter",
+        "con:no_quadratic_needed",
+        "con:ordinate_equals_the_centre",
+        "con:point_at_a_horizontal_extreme",
+        "giv:constant",
+        "giv:coordinate",
+        "giv:shift",
+        "mech:nonobvious_relationship",
+        "obj:circle_with_a_point_at_the_horizontal_extreme",
+        "rel:(v1 - v2)^# + (v3 - v4)^# = v5^#",
+        "rep:symbolic_algebraic",
+        "stim:none",
+        "tgt:parameter"
+      ]
+    },
+    {
+      "question_id": "Q-007-p8-q31",
+      "source_id": "S-007",
+      "source_file": "aaacabd4-Circles_50_REAL_QUESTION_WITH_ANS_KEY.pdf",
+      "source_page": 8,
+      "source_question_number": "31",
+      "source_block": "A",
+      "source_label": "Circles",
+      "source_administration": "December US 2024",
+      "observed_topic": "circles",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "47 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a per-page handle watermark",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Circle",
+      "taxonomy_subtopics": [
+        "GEO_006"
+      ],
+      "knowledge_nodes": [
+        "N-CIRC"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "symbolic_algebraic",
+      "target_type": "parameter",
+      "archetype": "A-CIRC-PARTIAL-CIRCUMFERENCE-RATE",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "abstraction",
+          "load_bearing": true,
+          "counterfactual": "the geometric formula is a linear function, so the increment depends on the step and not on where it starts"
+        },
+        {
+          "id": "filtering",
+          "load_bearing": true,
+          "counterfactual": "the constant of proportionality is what the item is about; the circle is context"
+        }
+      ],
+      "distractor_logic": [],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "student_produced_response",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "scaled_circumference_as_a_function_of_radius"
+        ],
+        "relations": [
+          "c(r) = (a/b) * circumference(r)"
+        ],
+        "given_roles": [
+          "coefficient",
+          "increment"
+        ],
+        "asked_role": "parameter",
+        "constraints": [
+          "linear_in_the_radius",
+          "increment_not_a_value",
+          "fractional_answer"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 3,
+      "observed_notes": "section heading: Circles",
+      "structural_fingerprint": "5e539b50d6ca5aac",
+      "mathematical_fingerprint": "490bb460c44aa5a2",
+      "fingerprint_components": [
+        "ans:student_produced_response",
+        "ask:parameter",
+        "con:fractional_answer",
+        "con:increment_not_a_value",
+        "con:linear_in_the_radius",
+        "giv:coefficient",
+        "giv:increment",
+        "mech:abstraction",
+        "mech:filtering",
+        "obj:scaled_circumference_as_a_function_of_radius",
+        "rel:v1(v2) = (v3/v4) * circumference(v2)",
+        "rep:symbolic_algebraic",
+        "stim:none",
+        "tgt:parameter"
+      ]
+    },
+    {
+      "question_id": "Q-007-p8-q32",
+      "source_id": "S-007",
+      "source_file": "aaacabd4-Circles_50_REAL_QUESTION_WITH_ANS_KEY.pdf",
+      "source_page": 8,
+      "source_question_number": "32",
+      "source_block": "A",
+      "source_label": "Circles",
+      "source_administration": "December 2024",
+      "observed_topic": "circles",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "47 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a per-page handle watermark",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Circle",
+      "taxonomy_subtopics": [
+        "GEO_006"
+      ],
+      "knowledge_nodes": [
+        "N-CIRC"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "verbal",
+      "target_type": "value",
+      "archetype": "A-CIRC-CIRCUMFERENCE-DIAMETER",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "filtering",
+          "load_bearing": true,
+          "counterfactual": "the diameter is one division away and the radius is a step too far"
+        }
+      ],
+      "distractor_logic": [],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "student_produced_response",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "circle_given_by_circumference"
+        ],
+        "relations": [
+          "C = pi*d"
+        ],
+        "given_roles": [
+          "circumference"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "one_step",
+          "diameter_asked_not_radius",
+          "units_stated"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 1,
+      "observed_notes": "section heading: Circles",
+      "structural_fingerprint": "e681331d1c240c35",
+      "mathematical_fingerprint": "aa8fe44110e2fae0",
+      "fingerprint_components": [
+        "ans:student_produced_response",
+        "ask:value",
+        "con:diameter_asked_not_radius",
+        "con:one_step",
+        "con:units_stated",
+        "giv:circumference",
+        "mech:filtering",
+        "obj:circle_given_by_circumference",
+        "rel:v1 = pi*v2",
+        "rep:verbal",
+        "stim:none",
+        "tgt:value"
+      ]
+    },
+    {
+      "question_id": "Q-007-p9-q33",
+      "source_id": "S-007",
+      "source_file": "aaacabd4-Circles_50_REAL_QUESTION_WITH_ANS_KEY.pdf",
+      "source_page": 9,
+      "source_question_number": "33",
+      "source_block": "A",
+      "source_label": "Circles",
+      "source_administration": "December 2024",
+      "observed_topic": "circles",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "47 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a per-page handle watermark",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Circle",
+      "taxonomy_subtopics": [
+        "GEO_006",
+        "GEO_002"
+      ],
+      "knowledge_nodes": [
+        "N-CIRC",
+        "N-TRI"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "geometry_figure",
+      "target_type": "value",
+      "archetype": "A-CIRC-CHORD-INTERSECT",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "multiconcept",
+          "load_bearing": true,
+          "counterfactual": "the intersecting-chord product and the bisection of a chord by a perpendicular diameter are chained"
+        },
+        {
+          "id": "hidden_step",
+          "load_bearing": true,
+          "counterfactual": "the two parts of the diameter are the roots of a quadratic that must be formed first"
+        },
+        {
+          "id": "abstraction",
+          "load_bearing": true,
+          "counterfactual": "the figure is declared not to scale, so nothing may be measured from it"
+        }
+      ],
+      "distractor_logic": [],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "student_produced_response",
+      "stimulus_type": "geometry_figure",
+      "mathematical_signature": {
+        "objects": [
+          "perpendicular_chords_one_a_diameter"
+        ],
+        "relations": [
+          "AD * DC = BD^2",
+          "AD + DC = diameter"
+        ],
+        "given_roles": [
+          "half_chord",
+          "diameter"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "figure_not_to_scale",
+          "quadratic_in_the_two_parts",
+          "ratio_asked"
+        ]
+      },
+      "conflicts": [
+        "TOPIC_CLASSIFICATION_CONFLICT",
+        "KDG_MAPPING_CONFLICT"
+      ],
+      "ingested_on": "2026-09-05",
+      "step_count": 5,
+      "observed_notes": "section heading: Circles",
+      "stimulus_id": "ST-007-33",
+      "structural_fingerprint": "39e8e83708960641",
+      "mathematical_fingerprint": "547d80decc610f9f",
+      "fingerprint_components": [
+        "ans:student_produced_response",
+        "ask:value",
+        "con:figure_not_to_scale",
+        "con:quadratic_in_the_two_parts",
+        "con:ratio_asked",
+        "giv:diameter",
+        "giv:half_chord",
+        "mech:abstraction",
+        "mech:hidden_step",
+        "mech:multiconcept",
+        "obj:perpendicular_chords_one_a_diameter",
+        "rel:AD * DC = BD^#",
+        "rel:AD + DC = diameter",
+        "rep:geometry_figure",
+        "stim:geometry_figure",
+        "tgt:value"
+      ]
+    },
+    {
+      "question_id": "Q-007-p9-q34",
+      "source_id": "S-007",
+      "source_file": "aaacabd4-Circles_50_REAL_QUESTION_WITH_ANS_KEY.pdf",
+      "source_page": 9,
+      "source_question_number": "34",
+      "source_block": "A",
+      "source_label": "Circles",
+      "source_administration": "December 2024",
+      "observed_topic": "circles",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "47 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a per-page handle watermark",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Circle",
+      "taxonomy_subtopics": [
+        "GEO_006"
+      ],
+      "knowledge_nodes": [
+        "N-CIRC"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "verbal",
+      "target_type": "value",
+      "archetype": "A-CIRC-AREA-SUM",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "filtering",
+          "load_bearing": true,
+          "counterfactual": "one circle is given by radius and the other by area, so only one of them is squared"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "arithmetic_slip",
+          "wrong_route": "the given area squared as if it were a radius"
+        },
+        {
+          "category": "incomplete_reasoning",
+          "wrong_route": "the radius added to the area"
+        },
+        {
+          "category": "arithmetic_slip",
+          "wrong_route": "the radius doubled instead of squared"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "two_circles_one_by_radius_one_by_area"
+        ],
+        "relations": [
+          "A = pi*r^2"
+        ],
+        "given_roles": [
+          "radius",
+          "area"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "mixed_given_kinds",
+          "sum_asked",
+          "units_stated"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 2,
+      "observed_notes": "section heading: Circles",
+      "structural_fingerprint": "1f4d7b8137f4869d",
+      "mathematical_fingerprint": "d93067a1470e6fcc",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:value",
+        "con:mixed_given_kinds",
+        "con:sum_asked",
+        "con:units_stated",
+        "dis:arithmetic_slip",
+        "dis:incomplete_reasoning",
+        "giv:area",
+        "giv:radius",
+        "mech:filtering",
+        "obj:two_circles_one_by_radius_one_by_area",
+        "rel:v1 = pi*v2^#",
+        "rep:verbal",
+        "stim:none",
+        "tgt:value"
+      ],
+      "duplicate_group": "DG-0044"
+    },
+    {
+      "question_id": "Q-007-p9-q35",
+      "source_id": "S-007",
+      "source_file": "aaacabd4-Circles_50_REAL_QUESTION_WITH_ANS_KEY.pdf",
+      "source_page": 9,
+      "source_question_number": "35",
+      "source_block": "A",
+      "source_label": "Circles",
+      "source_administration": "December 2024",
+      "observed_topic": "circles",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "47 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a per-page handle watermark",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Circle",
+      "taxonomy_subtopics": [
+        "GEO_006",
+        "GEO_008"
+      ],
+      "knowledge_nodes": [
+        "N-CIRC",
+        "N-COORD"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "symbolic_algebraic",
+      "target_type": "parameter",
+      "archetype": "A-CIRC-SCALE-RADIUS",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "abstraction",
+          "load_bearing": true,
+          "counterfactual": "the printed constant is the radius squared, so a factor on the radius squares before it reaches the constant"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "arithmetic_slip",
+          "wrong_route": "the constant scaled linearly rather than squared"
+        },
+        {
+          "category": "arithmetic_slip",
+          "wrong_route": "the scaling applied twice"
+        },
+        {
+          "category": "arithmetic_slip",
+          "wrong_route": "the scaling applied to the shifts instead"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "concentric_circle_with_a_transformed_radius"
+        ],
+        "relations": [
+          "(x - h)^2 + (y - k)^2 = r^2"
+        ],
+        "given_roles": [
+          "shift",
+          "shift",
+          "constant"
+        ],
+        "asked_role": "parameter",
+        "constraints": [
+          "same_centre",
+          "constant_stores_the_square",
+          "radius_doubled"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 2,
+      "observed_notes": "section heading: Circles",
+      "structural_fingerprint": "3efabd3663bb0c73",
+      "mathematical_fingerprint": "fb52b7992fe5fb2d",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:parameter",
+        "con:constant_stores_the_square",
+        "con:radius_doubled",
+        "con:same_centre",
+        "dis:arithmetic_slip",
+        "giv:constant",
+        "giv:shift",
+        "mech:abstraction",
+        "obj:concentric_circle_with_a_transformed_radius",
+        "rel:(v1 - v2)^# + (v3 - v4)^# = v5^#",
+        "rep:symbolic_algebraic",
+        "stim:none",
+        "tgt:parameter"
+      ]
+    },
+    {
+      "question_id": "Q-007-p9-q36",
+      "source_id": "S-007",
+      "source_file": "aaacabd4-Circles_50_REAL_QUESTION_WITH_ANS_KEY.pdf",
+      "source_page": 9,
+      "source_question_number": "36",
+      "source_block": "A",
+      "source_label": "Circles",
+      "source_administration": "March US 2025",
+      "observed_topic": "circles",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "47 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a per-page handle watermark",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Circle",
+      "taxonomy_subtopics": [
+        "GEO_006"
+      ],
+      "knowledge_nodes": [
+        "N-CIRC"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "verbal",
+      "target_type": "value",
+      "archetype": "A-CIRC-AREA-DIRECT",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "trap_cost",
+          "load_bearing": true,
+          "counterfactual": "the radius, its double and its quadruple are all printed against its square"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "incomplete_reasoning",
+          "wrong_route": "the radius reported"
+        },
+        {
+          "category": "arithmetic_slip",
+          "wrong_route": "the radius doubled"
+        },
+        {
+          "category": "arithmetic_slip",
+          "wrong_route": "the radius halved"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "circle_given_by_radius"
+        ],
+        "relations": [
+          "A = pi*r^2"
+        ],
+        "given_roles": [
+          "radius"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "one_step",
+          "units_stated",
+          "distractors_are_linear_in_the_radius"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 1,
+      "observed_notes": "section heading: Circles",
+      "structural_fingerprint": "e655f32e9f7deaed",
+      "mathematical_fingerprint": "22e6293572ac95b1",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:value",
+        "con:distractors_are_linear_in_the_radius",
+        "con:one_step",
+        "con:units_stated",
+        "dis:arithmetic_slip",
+        "dis:incomplete_reasoning",
+        "giv:radius",
+        "mech:trap_cost",
+        "obj:circle_given_by_radius",
+        "rel:v1 = pi*v2^#",
+        "rep:verbal",
+        "stim:none",
+        "tgt:value"
+      ],
+      "duplicate_group": "DG-0045"
+    },
+    {
+      "question_id": "Q-007-p10-q37",
+      "source_id": "S-007",
+      "source_file": "aaacabd4-Circles_50_REAL_QUESTION_WITH_ANS_KEY.pdf",
+      "source_page": 10,
+      "source_question_number": "37",
+      "source_block": "A",
+      "source_label": "Circles",
+      "source_administration": "March US 2025",
+      "observed_topic": "circles",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "47 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a per-page handle watermark",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Circle",
+      "taxonomy_subtopics": [
+        "GEO_006",
+        "GEO_008"
+      ],
+      "knowledge_nodes": [
+        "N-CIRC",
+        "N-COORD"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "symbolic_algebraic",
+      "target_type": "parameter",
+      "archetype": "A-CIRC-SCALE-RADIUS",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "abstraction",
+          "load_bearing": true,
+          "counterfactual": "the printed constant is the radius squared, so a factor on the radius squares before it reaches the constant"
+        }
+      ],
+      "distractor_logic": [],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "student_produced_response",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "concentric_circle_with_a_transformed_radius"
+        ],
+        "relations": [
+          "(x - h)^2 + (y - k)^2 = r^2"
+        ],
+        "given_roles": [
+          "shift",
+          "shift",
+          "constant"
+        ],
+        "asked_role": "parameter",
+        "constraints": [
+          "same_centre",
+          "constant_stores_the_square",
+          "radius_increased_by_a_constant"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 2,
+      "observed_notes": "section heading: Circles",
+      "structural_fingerprint": "576b5ea0999de0ab",
+      "mathematical_fingerprint": "5b7aa8014b408c51",
+      "fingerprint_components": [
+        "ans:student_produced_response",
+        "ask:parameter",
+        "con:constant_stores_the_square",
+        "con:radius_increased_by_a_constant",
+        "con:same_centre",
+        "giv:constant",
+        "giv:shift",
+        "mech:abstraction",
+        "obj:concentric_circle_with_a_transformed_radius",
+        "rel:(v1 - v2)^# + (v3 - v4)^# = v5^#",
+        "rep:symbolic_algebraic",
+        "stim:none",
+        "tgt:parameter"
+      ]
+    },
+    {
+      "question_id": "Q-007-p10-q38",
+      "source_id": "S-007",
+      "source_file": "aaacabd4-Circles_50_REAL_QUESTION_WITH_ANS_KEY.pdf",
+      "source_page": 10,
+      "source_question_number": "38",
+      "source_block": "A",
+      "source_label": "Circles",
+      "source_administration": "March US 2025",
+      "observed_topic": "circles",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "47 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a per-page handle watermark",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Circle",
+      "taxonomy_subtopics": [
+        "GEO_006",
+        "GEO_008"
+      ],
+      "knowledge_nodes": [
+        "N-CIRC",
+        "N-COORD"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "symbolic_algebraic",
+      "target_type": "equation",
+      "archetype": "A-CIRC-BUILD-FROM-CENTER-RADIUS",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "trap_cost",
+          "load_bearing": true,
+          "counterfactual": "squaring a product squares both factors, and the options square each one alone"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "incomplete_reasoning",
+          "wrong_route": "only the numeric factor of the radius squared"
+        },
+        {
+          "category": "incomplete_reasoning",
+          "wrong_route": "only the symbolic factor squared"
+        },
+        {
+          "category": "incomplete_reasoning",
+          "wrong_route": "neither factor squared"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "circle_from_centre_and_a_symbolic_radius"
+        ],
+        "relations": [
+          "(x - h)^2 + (y - k)^2 = (a*k)^2"
+        ],
+        "given_roles": [
+          "centre",
+          "coefficient",
+          "symbol"
+        ],
+        "asked_role": "equation",
+        "constraints": [
+          "radius_is_a_product",
+          "both_factors_must_square",
+          "options_split_the_square"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 2,
+      "observed_notes": "section heading: Circles",
+      "structural_fingerprint": "7fb0700baf3d97b4",
+      "mathematical_fingerprint": "e496fb9d941cd01f",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:equation",
+        "con:both_factors_must_square",
+        "con:options_split_the_square",
+        "con:radius_is_a_product",
+        "dis:incomplete_reasoning",
+        "giv:centre",
+        "giv:coefficient",
+        "giv:symbol",
+        "mech:trap_cost",
+        "obj:circle_from_centre_and_a_symbolic_radius",
+        "rel:(v1 - v2)^# + (v3 - v4)^# = (v5*v4)^#",
+        "rep:symbolic_algebraic",
+        "stim:none",
+        "tgt:equation"
+      ],
+      "duplicate_group": "DG-0042"
+    },
+    {
+      "question_id": "Q-007-p10-q39",
+      "source_id": "S-007",
+      "source_file": "aaacabd4-Circles_50_REAL_QUESTION_WITH_ANS_KEY.pdf",
+      "source_page": 10,
+      "source_question_number": "39",
+      "source_block": "A",
+      "source_label": "Circles",
+      "source_administration": "May 2025",
+      "observed_topic": "circles",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "47 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a per-page handle watermark",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Circle",
+      "taxonomy_subtopics": [
+        "GEO_006",
+        "GEO_008"
+      ],
+      "knowledge_nodes": [
+        "N-CIRC",
+        "N-COORD"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "symbolic_algebraic",
+      "target_type": "value",
+      "archetype": "A-CIRC-RADIUS-FROM-INTERCEPTS",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "inference",
+          "load_bearing": true,
+          "counterfactual": "the two intercepts form a chord, not a diameter, so a right triangle with the centre offset is required"
+        },
+        {
+          "id": "trap_cost",
+          "load_bearing": true,
+          "counterfactual": "the half-chord and the centre offset are both printed"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "incomplete_reasoning",
+          "wrong_route": "the half-chord reported as the radius"
+        },
+        {
+          "category": "wrong_interpretation",
+          "wrong_route": "the centre offset reported"
+        },
+        {
+          "category": "arithmetic_slip",
+          "wrong_route": "the half-chord and the offset added"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "circle_with_two_intercepts_on_one_axis"
+        ],
+        "relations": [
+          "centre (h, k)",
+          "intercepts (0, p) and (0, q)"
+        ],
+        "given_roles": [
+          "centre",
+          "intercept",
+          "intercept"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "intercepts_form_a_chord",
+          "right_triangle_not_drawn",
+          "pythagorean_triple"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 3,
+      "observed_notes": "section heading: Circles",
+      "structural_fingerprint": "bef01e60f5568bbd",
+      "mathematical_fingerprint": "59a1c6db69453050",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:value",
+        "con:intercepts_form_a_chord",
+        "con:pythagorean_triple",
+        "con:right_triangle_not_drawn",
+        "dis:arithmetic_slip",
+        "dis:incomplete_reasoning",
+        "dis:wrong_interpretation",
+        "giv:centre",
+        "giv:intercept",
+        "mech:inference",
+        "mech:trap_cost",
+        "obj:circle_with_two_intercepts_on_one_axis",
+        "rel:centre (v1, v2)",
+        "rel:intercepts (#, v1) and (#, v2)",
+        "rep:symbolic_algebraic",
+        "stim:none",
+        "tgt:value"
+      ]
+    },
+    {
+      "question_id": "Q-007-p10-q40",
+      "source_id": "S-007",
+      "source_file": "aaacabd4-Circles_50_REAL_QUESTION_WITH_ANS_KEY.pdf",
+      "source_page": 10,
+      "source_question_number": "40",
+      "source_block": "A",
+      "source_label": "Circles",
+      "source_administration": "May 2025",
+      "observed_topic": "circles",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "47 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a per-page handle watermark",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Circle",
+      "taxonomy_subtopics": [
+        "GEO_006",
+        "GEO_008"
+      ],
+      "knowledge_nodes": [
+        "N-CIRC",
+        "N-COORD"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "graph",
+      "target_type": "value",
+      "archetype": "A-CIRC-TRANSLATE",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "filtering",
+          "load_bearing": true,
+          "counterfactual": "the translation is a decoy: the asked constant is the radius squared, which a translation leaves alone"
+        },
+        {
+          "id": "representation_switch",
+          "load_bearing": true,
+          "counterfactual": "the circle is both plotted and printed, and only the printed equation is needed"
+        }
+      ],
+      "distractor_logic": [],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "student_produced_response",
+      "stimulus_type": "graph",
+      "mathematical_signature": {
+        "objects": [
+          "circle_translated_horizontally"
+        ],
+        "relations": [
+          "x^2 + (y - k)^2 = a"
+        ],
+        "given_roles": [
+          "constant",
+          "translation"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "graph_supplied_but_not_needed",
+          "radius_unchanged",
+          "scaled_constant_asked"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 2,
+      "observed_notes": "section heading: Circles",
+      "stimulus_id": "ST-007-40",
+      "structural_fingerprint": "ee47d16d39b9c4f6",
+      "mathematical_fingerprint": "45621686d1074da8",
+      "fingerprint_components": [
+        "ans:student_produced_response",
+        "ask:value",
+        "con:graph_supplied_but_not_needed",
+        "con:radius_unchanged",
+        "con:scaled_constant_asked",
+        "giv:constant",
+        "giv:translation",
+        "mech:filtering",
+        "mech:representation_switch",
+        "obj:circle_translated_horizontally",
+        "rel:v1^# + (v2 - v3)^# = v4",
+        "rep:graph",
+        "stim:graph",
+        "tgt:value"
+      ]
+    },
+    {
+      "question_id": "Q-007-p11-q41",
+      "source_id": "S-007",
+      "source_file": "aaacabd4-Circles_50_REAL_QUESTION_WITH_ANS_KEY.pdf",
+      "source_page": 11,
+      "source_question_number": "41",
+      "source_block": "A",
+      "source_label": "Circles",
+      "source_administration": "May 2025",
+      "observed_topic": "circles",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "47 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a per-page handle watermark",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Circle",
+      "taxonomy_subtopics": [
+        "GEO_006",
+        "GEO_005"
+      ],
+      "knowledge_nodes": [
+        "N-CIRC",
+        "N-TRIG"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "symbolic_algebraic",
+      "target_type": "value",
+      "archetype": "A-CIRC-UNIT-CIRCLE-TRIG",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "representation_switch",
+          "load_bearing": true,
+          "counterfactual": "the coordinates of the point ARE the cosine and the sine, which is the whole item"
+        },
+        {
+          "id": "filtering",
+          "load_bearing": true,
+          "counterfactual": "the identical radical denominators cancel and never need evaluating"
+        }
+      ],
+      "distractor_logic": [],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "student_produced_response",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "unit_circle_point_with_radical_coordinates"
+        ],
+        "relations": [
+          "point (a/sqrt(n), b/sqrt(n))"
+        ],
+        "given_roles": [
+          "coordinate",
+          "coordinate"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "denominators_cancel",
+          "one_coordinate_negative",
+          "ratio_of_functions_asked"
+        ]
+      },
+      "conflicts": [
+        "TOPIC_CLASSIFICATION_CONFLICT",
+        "KDG_MAPPING_CONFLICT"
+      ],
+      "ingested_on": "2026-09-05",
+      "step_count": 2,
+      "observed_notes": "section heading: Circles",
+      "structural_fingerprint": "6a8db4c934d0f87a",
+      "mathematical_fingerprint": "507255c4a0b7dc98",
+      "fingerprint_components": [
+        "ans:student_produced_response",
+        "ask:value",
+        "con:denominators_cancel",
+        "con:one_coordinate_negative",
+        "con:ratio_of_functions_asked",
+        "giv:coordinate",
+        "mech:filtering",
+        "mech:representation_switch",
+        "obj:unit_circle_point_with_radical_coordinates",
+        "rel:point (v1/sqrt(v2), v3/sqrt(v2))",
+        "rep:symbolic_algebraic",
+        "stim:none",
+        "tgt:value"
+      ],
+      "duplicate_group": "DG-0046"
+    },
+    {
+      "question_id": "Q-007-p11-q42",
+      "source_id": "S-007",
+      "source_file": "aaacabd4-Circles_50_REAL_QUESTION_WITH_ANS_KEY.pdf",
+      "source_page": 11,
+      "source_question_number": "42",
+      "source_block": "A",
+      "source_label": "Circles",
+      "source_administration": "June 2025",
+      "observed_topic": "circles",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "47 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a per-page handle watermark",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Circle",
+      "taxonomy_subtopics": [
+        "GEO_006",
+        "GEO_005"
+      ],
+      "knowledge_nodes": [
+        "N-CIRC",
+        "N-TRIG"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "symbolic_algebraic",
+      "target_type": "value",
+      "archetype": "A-CIRC-UNIT-CIRCLE-TRIG",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "representation_switch",
+          "load_bearing": true,
+          "counterfactual": "the coordinates of the point ARE the cosine and the sine, which is the whole item"
+        },
+        {
+          "id": "filtering",
+          "load_bearing": true,
+          "counterfactual": "the identical radical denominators cancel and never need evaluating"
+        }
+      ],
+      "distractor_logic": [],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "student_produced_response",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "unit_circle_point_with_radical_coordinates"
+        ],
+        "relations": [
+          "point (a/sqrt(n), b/sqrt(n))"
+        ],
+        "given_roles": [
+          "coordinate",
+          "coordinate"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "denominators_cancel",
+          "one_coordinate_negative",
+          "ratio_of_functions_asked"
+        ]
+      },
+      "conflicts": [
+        "TOPIC_CLASSIFICATION_CONFLICT",
+        "KDG_MAPPING_CONFLICT"
+      ],
+      "ingested_on": "2026-09-05",
+      "step_count": 2,
+      "observed_notes": "section heading: Circles",
+      "structural_fingerprint": "6a8db4c934d0f87a",
+      "mathematical_fingerprint": "507255c4a0b7dc98",
+      "fingerprint_components": [
+        "ans:student_produced_response",
+        "ask:value",
+        "con:denominators_cancel",
+        "con:one_coordinate_negative",
+        "con:ratio_of_functions_asked",
+        "giv:coordinate",
+        "mech:filtering",
+        "mech:representation_switch",
+        "obj:unit_circle_point_with_radical_coordinates",
+        "rel:point (v1/sqrt(v2), v3/sqrt(v2))",
+        "rep:symbolic_algebraic",
+        "stim:none",
+        "tgt:value"
+      ],
+      "duplicate_group": "DG-0046"
+    },
+    {
+      "question_id": "Q-007-p11-q43",
+      "source_id": "S-007",
+      "source_file": "aaacabd4-Circles_50_REAL_QUESTION_WITH_ANS_KEY.pdf",
+      "source_page": 11,
+      "source_question_number": "43",
+      "source_block": "A",
+      "source_label": "Circles",
+      "source_administration": "June US 2025",
+      "observed_topic": "circles",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "47 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a per-page handle watermark",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Circle",
+      "taxonomy_subtopics": [
+        "GEO_006"
+      ],
+      "knowledge_nodes": [
+        "N-CIRC"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "verbal",
+      "target_type": "value",
+      "archetype": "A-CIRC-ARC-DEGREE-CIRCUMFERENCE",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "trap_cost",
+          "load_bearing": true,
+          "counterfactual": "the arc length itself is printed, and so are scalings by the wrong factor"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "incomplete_reasoning",
+          "wrong_route": "the arc length reported unscaled"
+        },
+        {
+          "category": "arithmetic_slip",
+          "wrong_route": "scaled by half the correct factor"
+        },
+        {
+          "category": "arithmetic_slip",
+          "wrong_route": "scaled by the degree measure itself"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "arc_with_a_stated_degree_measure"
+        ],
+        "relations": [
+          "arc = C * (theta / full_turn)"
+        ],
+        "given_roles": [
+          "arc_length",
+          "angle_measure"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "degrees_not_radians",
+          "proportion_in_one_step",
+          "circumference_asked"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 2,
+      "observed_notes": "section heading: Circles",
+      "structural_fingerprint": "e655f32e9f7deaed",
+      "mathematical_fingerprint": "2c863cb549ae92b1",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:value",
+        "con:circumference_asked",
+        "con:degrees_not_radians",
+        "con:proportion_in_one_step",
+        "dis:arithmetic_slip",
+        "dis:incomplete_reasoning",
+        "giv:angle_measure",
+        "giv:arc_length",
+        "mech:trap_cost",
+        "obj:arc_with_a_stated_degree_measure",
+        "rel:arc = v1 * (theta / full_turn)",
+        "rep:verbal",
+        "stim:none",
+        "tgt:value"
+      ],
+      "duplicate_group": "DG-0043"
+    },
+    {
+      "question_id": "Q-007-p11-q44",
+      "source_id": "S-007",
+      "source_file": "aaacabd4-Circles_50_REAL_QUESTION_WITH_ANS_KEY.pdf",
+      "source_page": 11,
+      "source_question_number": "44",
+      "source_block": "A",
+      "source_label": "Circles",
+      "source_administration": "June US 2025",
+      "observed_topic": "circles",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "47 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a per-page handle watermark",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Circle",
+      "taxonomy_subtopics": [
+        "GEO_006"
+      ],
+      "knowledge_nodes": [
+        "N-CIRC"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "verbal",
+      "target_type": "value",
+      "archetype": "A-CIRC-AREA-DIRECT",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "trap_cost",
+          "load_bearing": true,
+          "counterfactual": "the radius, its double and its quadruple are all printed against its square"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "incomplete_reasoning",
+          "wrong_route": "the radius reported"
+        },
+        {
+          "category": "arithmetic_slip",
+          "wrong_route": "the radius doubled"
+        },
+        {
+          "category": "arithmetic_slip",
+          "wrong_route": "the radius halved"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "circle_given_by_radius"
+        ],
+        "relations": [
+          "A = pi*r^2"
+        ],
+        "given_roles": [
+          "radius"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "one_step",
+          "units_stated",
+          "distractors_are_linear_in_the_radius"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 1,
+      "observed_notes": "section heading: Circles",
+      "structural_fingerprint": "e655f32e9f7deaed",
+      "mathematical_fingerprint": "22e6293572ac95b1",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:value",
+        "con:distractors_are_linear_in_the_radius",
+        "con:one_step",
+        "con:units_stated",
+        "dis:arithmetic_slip",
+        "dis:incomplete_reasoning",
+        "giv:radius",
+        "mech:trap_cost",
+        "obj:circle_given_by_radius",
+        "rel:v1 = pi*v2^#",
+        "rep:verbal",
+        "stim:none",
+        "tgt:value"
+      ],
+      "duplicate_group": "DG-0045"
+    },
+    {
+      "question_id": "Q-007-p12-q45",
+      "source_id": "S-007",
+      "source_file": "aaacabd4-Circles_50_REAL_QUESTION_WITH_ANS_KEY.pdf",
+      "source_page": 12,
+      "source_question_number": "45",
+      "source_block": "A",
+      "source_label": "Circles",
+      "source_administration": "June US 2025",
+      "observed_topic": "circles",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "47 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a per-page handle watermark",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Circle",
+      "taxonomy_subtopics": [
+        "GEO_006"
+      ],
+      "knowledge_nodes": [
+        "N-CIRC"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "verbal",
+      "target_type": "value",
+      "archetype": "A-CIRC-AREA-RATIO",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "abstraction",
+          "load_bearing": true,
+          "counterfactual": "the shared symbol cancels, so the answer is a pure number however the radii are written"
+        },
+        {
+          "id": "trap_cost",
+          "load_bearing": true,
+          "counterfactual": "the unsquared ratio is the natural stopping point"
+        }
+      ],
+      "distractor_logic": [],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "student_produced_response",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "two_circles_with_symbolic_radii"
+        ],
+        "relations": [
+          "r_A = a*z",
+          "r_B = b*z"
+        ],
+        "given_roles": [
+          "coefficient",
+          "coefficient",
+          "symbol"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "shared_symbol_cancels",
+          "ratio_must_be_squared",
+          "no_units"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 2,
+      "observed_notes": "section heading: Circles",
+      "structural_fingerprint": "e5998212f15a3202",
+      "mathematical_fingerprint": "2b9f05c966815d96",
+      "fingerprint_components": [
+        "ans:student_produced_response",
+        "ask:value",
+        "con:no_units",
+        "con:ratio_must_be_squared",
+        "con:shared_symbol_cancels",
+        "giv:coefficient",
+        "giv:symbol",
+        "mech:abstraction",
+        "mech:trap_cost",
+        "obj:two_circles_with_symbolic_radii",
+        "rel:v1_v2 = v3*v4",
+        "rep:verbal",
+        "stim:none",
+        "tgt:value"
+      ],
+      "duplicate_group": "DG-0041"
+    },
+    {
+      "question_id": "Q-007-p12-q46",
+      "source_id": "S-007",
+      "source_file": "aaacabd4-Circles_50_REAL_QUESTION_WITH_ANS_KEY.pdf",
+      "source_page": 12,
+      "source_question_number": "46",
+      "source_block": "A",
+      "source_label": "Circles",
+      "source_administration": "June US 2025",
+      "observed_topic": "circles",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "47 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a per-page handle watermark",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Circle",
+      "taxonomy_subtopics": [
+        "GEO_006"
+      ],
+      "knowledge_nodes": [
+        "N-CIRC"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "verbal",
+      "target_type": "value",
+      "archetype": "A-CIRC-AREA-SUM",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "filtering",
+          "load_bearing": true,
+          "counterfactual": "one circle is given by radius and the other by area, so only one of them is squared"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "arithmetic_slip",
+          "wrong_route": "the given area squared as if it were a radius"
+        },
+        {
+          "category": "incomplete_reasoning",
+          "wrong_route": "the radius added to the area"
+        },
+        {
+          "category": "arithmetic_slip",
+          "wrong_route": "the radius doubled instead of squared"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "two_circles_one_by_radius_one_by_area"
+        ],
+        "relations": [
+          "A = pi*r^2"
+        ],
+        "given_roles": [
+          "radius",
+          "area"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "mixed_given_kinds",
+          "sum_asked",
+          "units_stated"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 2,
+      "observed_notes": "section heading: Circles",
+      "structural_fingerprint": "1f4d7b8137f4869d",
+      "mathematical_fingerprint": "d93067a1470e6fcc",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:value",
+        "con:mixed_given_kinds",
+        "con:sum_asked",
+        "con:units_stated",
+        "dis:arithmetic_slip",
+        "dis:incomplete_reasoning",
+        "giv:area",
+        "giv:radius",
+        "mech:filtering",
+        "obj:two_circles_one_by_radius_one_by_area",
+        "rel:v1 = pi*v2^#",
+        "rep:verbal",
+        "stim:none",
+        "tgt:value"
+      ],
+      "duplicate_group": "DG-0044"
+    },
+    {
+      "question_id": "Q-007-p12-q47",
+      "source_id": "S-007",
+      "source_file": "aaacabd4-Circles_50_REAL_QUESTION_WITH_ANS_KEY.pdf",
+      "source_page": 12,
+      "source_question_number": "47",
+      "source_block": "A",
+      "source_label": "Circles",
+      "source_administration": "June US 2025",
+      "observed_topic": "circles",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "47 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a per-page handle watermark",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Circle",
+      "taxonomy_subtopics": [
+        "GEO_006",
+        "GEO_008"
+      ],
+      "knowledge_nodes": [
+        "N-CIRC",
+        "N-COORD"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "symbolic_algebraic",
+      "target_type": "parameter",
+      "archetype": "A-CIRC-EXPAND-TO-GENERAL",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "filtering",
+          "load_bearing": true,
+          "counterfactual": "only the constant term is asked, so the linear coefficients are intermediate work"
+        },
+        {
+          "id": "reversal",
+          "load_bearing": true,
+          "counterfactual": "the standard form must be built from prose before it can be expanded"
+        }
+      ],
+      "distractor_logic": [],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "student_produced_response",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "circle_from_centre_and_radius_in_general_form"
+        ],
+        "relations": [
+          "x^2 + y^2 + a*x + b*y + c = 0"
+        ],
+        "given_roles": [
+          "centre",
+          "radius"
+        ],
+        "asked_role": "parameter",
+        "constraints": [
+          "centre_and_radius_given_in_prose",
+          "constant_term_asked",
+          "expansion_required"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 3,
+      "observed_notes": "section heading: Circles",
+      "structural_fingerprint": "3b974d31e4c31d26",
+      "mathematical_fingerprint": "3c4c7047eb11e1aa",
+      "fingerprint_components": [
+        "ans:student_produced_response",
+        "ask:parameter",
+        "con:centre_and_radius_given_in_prose",
+        "con:constant_term_asked",
+        "con:expansion_required",
+        "giv:centre",
+        "giv:radius",
+        "mech:filtering",
+        "mech:reversal",
+        "obj:circle_from_centre_and_radius_in_general_form",
+        "rel:v1^# + v2^# + v3*v1 + v4*v2 + v5 = #",
+        "rep:symbolic_algebraic",
+        "stim:none",
+        "tgt:parameter"
+      ],
+      "duplicate_group": "DG-0036"
     }
   ]
 }

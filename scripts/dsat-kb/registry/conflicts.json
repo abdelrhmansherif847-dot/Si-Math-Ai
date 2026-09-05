@@ -177,6 +177,17 @@
    "statement_b": "one item runs A) B) C) E) with no D, and two items parenthesise the letters as (A) (B) (C) (D)",
    "why": "the letters are transcription, not content, but a missing D means one printed choice cannot be selected as written",
    "resolution": "NONE. Recorded on the affected records. No letter is corrected: the KB stores no option letters at all, and repairing the source would hide that this compiler mis-transcribes."
+  },
+  {
+   "conflict_id": "SRC-0009",
+   "kind": "SOURCE_CONFLICT",
+   "opened": "2026-09-05",
+   "status": "open",
+   "about": "the circles file is named for 50 questions and contains 47",
+   "statement_a": "the filename reads \"Circles 50 REAL QUESTION WITH ANS KEY\"",
+   "statement_b": "the document numbers its items 1 to 47, and the printed answer key has 47 rows",
+   "why": "a count in a filename is not evidence about the document, and here the two disagree by three",
+   "resolution": "NONE. 47 records were coded, one per numbered item. The filename count is recorded on the source row as filename_claims and is not used anywhere."
   }
  ]
 }

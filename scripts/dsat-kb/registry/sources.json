@@ -188,6 +188,45 @@
       ],
       "file_sha256": "0dcfc1c66fdda9d092f1f045a5689e365e648cf1fe5d6886ba4f504693a0c711",
       "same_compiler_as": "S-001 — same Telegram channel, same guide (pages 52-70 here, 154-155 there)"
+    },
+    {
+      "source_id": "S-007",
+      "source_file": "aaacabd4-Circles_50_REAL_QUESTION_WITH_ANS_KEY.pdf",
+      "sha256": "0f40d5e89f34a282a5a108287c3d39796870983a9da718e824324cab2fbb910e",
+      "md5": "a10b84d93835977761f864d75c0abec8",
+      "bytes": 290597,
+      "pages": 14,
+      "title": "Circles (compiled extract, 47 items with an answer key)",
+      "declared_topic": "Circle",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "47 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a per-page handle watermark",
+      "text_layer": true,
+      "image_only": false,
+      "corpus_dir": "/tmp/claude-0/-home-user-Si-Math-Ai/04b11b7c-9e5a-5d76-8bd0-64a172a5c12c/scratchpad/dsat-corpus/0f40d5e89f34",
+      "registered": "2026-09-05",
+      "questions_coded": 47,
+      "source_block": "A",
+      "block_label": "Circles",
+      "page_from": 1,
+      "page_to": 12,
+      "questions": 47,
+      "answer_key_pages": [
+        13,
+        14
+      ],
+      "answer_key_covers": "its own 47 items, by item number",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "provenance_signals": [
+        "telegram_channel",
+        "administration_tag",
+        "social_handle"
+      ],
+      "same_compiler_as": "S-001 and S-006 — same Telegram channel and watermark",
+      "filename_claims": 50,
+      "questions_found": 47,
+      "file_sha256": "0f40d5e89f34a282a5a108287c3d39796870983a9da718e824324cab2fbb910e"
     }
   ]
 }
