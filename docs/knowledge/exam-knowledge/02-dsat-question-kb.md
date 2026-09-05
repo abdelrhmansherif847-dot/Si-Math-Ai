@@ -1193,3 +1193,142 @@ waive the guard.** `taxonomy.core.js`, the KDG, the generator, the EST system an
 every exam artifact are untouched; ESTM1's payload md5 is unchanged.
 
 *Sixth ingestion, 2026-09-05.*
+
+---
+
+## 23. Seventh ingestion: the triangles corpus
+
+`146e25e4-Triangles_143_QUESTIONS_64_REAL__79_QUESTION_BANK.pdf` —
+sha256 `a25de814b760…`, 2,352,532 bytes, **95 pages**, read from the page tree.
+Registered as **two** sources, because it is two documents:
+
+| | S-009 | S-010 |
+|---|---|---|
+| pages | 1–16 | 17–95 |
+| items | 64 | 79 |
+| heading | "Triangles" | none |
+| per-item metadata | a named administration | an eight-character item id, nothing else |
+| provenance | `recalled_unofficial`, **OBSERVED** | `unknown`, **UNKNOWN** |
+| generation | EXCLUDED | NOT_DIRECT_SOURCE |
+
+### The blocks were given different provenance because the evidence is all in one
+
+All 64 administration tags are block A's. So is the single Telegram annotation,
+and so is the one handle watermark — page 13, which is inside block A. Block B's
+79 pages carry **no provenance signal at all**. Inheriting block A's evidence
+across the file boundary would have been the easiest thing to do and would have
+manufactured confidence out of adjacency. D-3 already says a source row is a
+block rather than a file; this is the first file where the two blocks needed
+*different provenance*, not just different labels.
+
+### The filename told the truth, for the first time
+
+Three earlier files disagreed with their own names — circles overcounted by
+three, solid geometry undercounted by one. This one claims *143 questions, 64
+real + 79 question bank*, and the document holds **exactly 64 and exactly 79**,
+verified against a mechanical page-by-page index of block B's item ids: 79
+pages, 79 ids, all distinct, one per page, matching the visual read in order.
+
+The claim that is **not** corroborated is what "question bank" means. The two
+earlier bank exports printed Assessment, Test, Domain, Skill and Difficulty on
+every page; this block prints none of them. The claim rests on the filename
+alone, and is registered as **SRC-0012** rather than believed.
+
+### No answer key. A first, and it costs something
+
+Every earlier ingestion had a printed key for at least part of its material, and
+those keys caught real errors. **This file prints no key anywhere in 95 pages.**
+Forty-three of these 143 records are student-produced-response items whose
+answers cannot be checked against the compiler's own. Nothing here is verified in
+the sense the polynomials corpus was; the coding is a reading of construction,
+and it is recorded as exactly that.
+
+### The file is not only about triangles
+
+Thirty-four of the 143 items code away from Triangles — **30 to Geometry (Lines
+& Angles), 3 to Polygons — and 33 of the 34 are in block B**, where roughly a
+third of the material is the parallel-lines-and-transversal construction that
+block A never uses once. A reader trusting the title would mis-shelve a fifth of
+the file. Registered as **SRC-0013**.
+
+### The first corpus whose topic rows are not themselves a conflict
+
+`Triangles` and `Geometry (Lines & Angles)` both exist on the exam-topic axis,
+both map to frozen subtopics, and neither is flagged. Fifteen records still
+carry a conflict, and it is a different kind: **the item needs two rows at
+once.** Eleven chase an angle through crossing lines *into* a triangle, two
+inscribe an equilateral triangle in a circle, two put a triangle in the
+coordinate plane. No split of either row would fix it, because the tie is a
+union rather than a finer distinction — **TAX-0010**.
+
+### The duplicate detector found three defects in my own coding
+
+Not in the file. In the records I had just written.
+
+1. **A collapsed construction.** Page 18 was grouped with two items that need the
+   angle sum. It does not: its correspondence names the asked vertex directly,
+   the answer is a given angle, and the second given angle is a decoy. I had
+   reused a helper whose signature asserted `asked_vertex_is_third`.
+2. **Five figures recorded as prose.** A helper hard-coded `verbal`; five of its
+   six users are drawn figures. Three more items carried a figure stimulus with a
+   `symbolic_algebraic` representation, which no earlier record in this corpus
+   does — a convention I had broken without noticing.
+3. **Presentation smuggled into the mathematical signature.** Four constraints
+   carried something that is not mathematics: how the choices are laid out
+   (`roman_numeral_options`), what the story is dressed as
+   (`named_landmark_context`), and one comparative claim about *this corpus*
+   rather than about the item (`longest_chain_in_the_corpus`). The first of these
+   was **suppressing a true duplicate** — removing it merged a group from two
+   members to three.
+
+This is the same failure the linear-systems ingestion found three times, in the
+same place, from the opposite direction: there, source accidents leaked *in*;
+here, my own presentation vocabulary did. **The mathematical signature must carry
+mathematics, and nothing whose truth depends on the printing.**
+
+### What 143 items were worth
+
+**38 constructions**, all 38 used — none defined and left idle. 105 distinct
+mathematical fingerprints for 143 items.
+
+The load-bearing mechanisms are `trap_cost` (79) and `nonobvious_relationship`
+(60), and in this material the second one means one thing repeatedly: **a
+relation that makes the work vanish if you see it.** The sine of one acute angle
+equals the cosine of the other; two matching angles already force the third; a
+dilation changes every length and no angle; a radical factor shared by both legs
+survives the Pythagorean identity untouched. Each of those items prints, as a
+distractor, the answer a solver gets by doing the work the relation makes
+unnecessary.
+
+The largest family is **sufficiency** — 13 items asking which extra fact settles
+congruence or similarity, more than any single computational family. This corpus
+is markedly less about calculating than the six before it.
+
+### Repetition, across five sets from one compiler
+
+| ingestion | records in a duplicate group |
+|---|---|
+| polynomials, block A | 43% |
+| linear systems | 48% |
+| circles | 60% |
+| areas & volumes | 51% |
+| triangles | **38%** |
+
+Now **38%–60%** over five sets. The band widened rather than tightened, which
+is the second time this figure has failed to settle; no trend is claimed. Within
+this file the two blocks differ sharply — **block A 50%, block B 28%** — and the
+largest single repeat is the parallel-lines angle item, printed **five times** in
+block B with nothing changed but the number.
+
+### Standing state
+
+CI **84/84 green** · 10 sources, 581 questions, 158 archetypes, 23 conflicts
+(**10** taxonomy + 13 source, all open) · 81 duplicate groups covering 204 of 581
+records · longest string in `questions.json` 194 characters. Validator catches
+during this ingestion — item ids used as question-id ordinals, and numbered
+placeholders (`v1`, `t1`) in signature relations, which are the *erasure's own
+output shape* and not an input one — were fixed in the data.
+`taxonomy.core.js`, the KDG, the generator, the EST system and every exam
+artifact are untouched.
+
+*Seventh ingestion, 2026-09-05.*

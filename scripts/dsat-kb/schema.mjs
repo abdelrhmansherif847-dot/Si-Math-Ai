@@ -261,6 +261,10 @@ export const OBSERVED_TOPICS = [
   // headings and the answer key repeats only the first, so both are recorded.
   'areas_and_volumes',
   'solid_geometry',
+  // seen in the triangles corpus, 2026-09-05. Block A's section heading only:
+  // block B carries no topic word of its own, so its items observe UNKNOWN
+  // however plainly a reader can see what they are about.
+  'triangles',
 ];
 
 // ── the copyright guard ──────────────────────────────────────────────────────
