@@ -6346,7 +6346,7 @@ The Stage 1 entry audit found exactly that and blocked on it, so this section
 is the definition — **and nothing more**. No renderer, no evaluator, no code,
 no schema, no migration.
 
-**Provenance, marked throughout.** Every clause below carries one of four
+**Provenance, marked throughout.** Every clause below carries one of five
 labels, so a later reader can tell a standing requirement from a decision taken
 today from a gap still open:
 
@@ -6358,6 +6358,10 @@ today from a gap still open:
 - **[stage-1 scope]** — a constraint the roadmap imposes on **Stage 0** and
   never on Stage 1, which Stage 1 adopts by explicit approval. It is a real
   requirement, and it is **not** something this document already said.
+- **[design decision]** — a behavioural choice among candidate rules that the
+  roadmap does not determine. It **adds a requirement**, and the alternatives
+  it rejected are recorded beside it, so a later reader can see it was a
+  choice and not a reading.
 - **UNSPECIFIED** — a genuine gap. §16.10.8 lists them. **None is filled by
   guessing**, and Stage 1 is not complete while one of them is being answered
   implicitly by code rather than explicitly by a decision.
@@ -6531,7 +6535,9 @@ not asserted. Each is checkable by running something.
 Recorded as gaps, **not decided here**. Each needs an explicit decision before
 or during Stage 1, in the way O-1, O-2 and O-4 were decided.
 
-- **U-1 · Which source a curve carrying BOTH `expr` and `points` draws from.**
+- **U-1 · CLOSED by §16.10.10** (2026-09-05) — `expr` outranks `points` when
+  it is drawable; `points` are the fallback. The question it answered:
+  **which source a curve carrying BOTH `expr` and `points` draws from.**
   Every Stage 0 curve carries both — that is the storage law (§16.7.5). §16.3
   says `points` are *"what today's renderer draws"* and `expr` is what *"Stage 1
   will render directly"*, which implies a preference but never states a rule.
@@ -6550,8 +6556,10 @@ or during Stage 1, in the way O-1, O-2 and O-4 were decided.
   BUILT, NOT DEPLOYED (§16.9). Whether Stage 1 ships with it, after it, or
   separately — and whether it reaches the student player, the staff pages, or
   both — is not stated anywhere. UNSPECIFIED.
-- **U-4 · What becomes of the *"defined by a formula and is not drawn here"*
-  note.** It is the renderer's honest-degradation path for a curve with no
+- **U-4 · CLOSED by §16.10.10** (2026-09-05) — the note survives, narrowed to
+  the case where nothing can be drawn from either source. The question it
+  answered: **what becomes of the *"defined by a formula and is not drawn
+  here"* note.** It is the renderer's honest-degradation path for a curve with no
   points, and `tests/stimulus-view.test.mjs:112-113` asserts it fires for
   `{expr: 'x^2'}` with no points — **an assertion Stage 1 will make false**.
   Whether the note is removed, narrowed to unsupported expressions, or kept for
@@ -6571,3 +6579,175 @@ migration. Stages 2–4 are untouched. The first Stage 1 increment is the
 expression renderer, built on the closed O-4 decision — and it starts by
 closing U-1, U-2 and U-4, because all three change what it must be written to
 do.
+
+#### 16.10.10 · U-1 + U-4 CLOSED — the `expr` / `points` precedence (2026-09-05)
+
+Read-only audit, then a decision. No code, no test, no schema. U-1 and U-4 are
+**one** decision — U-1 asks which source a curve carrying both keys draws from,
+U-4 asks what happens to the *"defined by a formula and is not drawn here"*
+note — and the same truth table settles both. Deciding them apart would have
+risked a rule that contradicts itself at the boundary.
+
+##### The rule, LOCKED
+
+> **U-1/U-4 (CLOSED).** For every curve in a `plot`, in this order:
+>
+> 1. A curve with a **string `expr`** that is **drawable** is rendered **from
+>    `expr`**; `points` are not consulted.
+> 2. A curve whose `expr` is **not drawable** falls back to its stored
+>    `points` and draws them, if it has a drawable set.
+> 3. A curve that can be drawn from **neither** emits the existing note.
+> 4. A curve with **no string `expr`** renders exactly as today, from
+>    `points`. A **non-string** `expr` is treated as **absent**.
+> 5. `points` remain **stored** in every case.
+
+##### `drawable` is a named predicate, and only half of it is closed here
+
+It splits in two, and the halves have different owners:
+
+- **not drawable — parse failure.** Fully determined by the locked §16.7.1
+  grammar and **independent of sampling density**, so it is **closed by this
+  decision**. Measured: `@@bad@@` returns the identical sentence on
+  `[-5,5]²`, `[0,1]²` and `[-100,100]²`.
+- **not drawable — no drawable part in range.** Depends on how the renderer
+  samples. **Whether a given expression is in this state is U-5's to define**
+  and is NOT closed here.
+
+**The boundary, stated exactly:**
+
+> **U-1/U-4 fixes what happens in each row of the table below. U-5 fixes which
+> row a given `(expr, xRange, yRange)` lands in.**
+
+##### Provenance of each rule
+
+| Rule | Label | Basis |
+|---|---|---|
+| **1** · `expr` outranks `points` | **[roadmap]** | §16.7.11 — *"Stage 1 renders from `expr`; `points` stay the answer for any renderer that does not evaluate one"*; §16.3 — *"the points are what **today's** renderer draws"* |
+| **2** · fallback to `points` on failure | **[design decision]** | R-C chosen over R-A. The roadmap requires no fallback; R-A would leave a blank graph beside usable points |
+| **3** · the note survives, narrowed | **[design decision]** | Keeps the mechanism §16.3 and §16.7.5 both cite, but in **strictly fewer** cases than today. The narrowing is the decision |
+| **4** · non-string `expr` is absent | **[design decision]** | Forced by **V-1** below; the roadmap never contemplates it |
+| **5** · both stay stored | **[roadmap]** | §16.7.5, restated by O-4 in §16.7.11 |
+
+**[stage-1 scope] is used for none of the five**, correctly: not one of them is
+a Stage 0 constraint being adopted.
+
+##### The evidence
+
+**The boundary is narrow.** Exactly two modules read `curves[]` —
+`stimulus-view.js:266` (`renderPlot`, the only renderer, which **never** reads
+`.expr`) and `stimulus-editor.js:476-488` (`hydratePlot`). `exam.html`,
+`teacher-exams.html` and `teacher-homework.html` all go through
+`StimulusView.render()`. So this decision has **one implementation site and one
+agreement site**.
+
+**`expr` alone has always been a complete curve.** `exam_stimulus_spec_ok`,
+read from production, validates a curve with a **disjunction** —
+`(expr is a string) OR (points is an array of length >= 2)` — in a validator
+that predates Stage 0. Calling the live function: `{"expr":"x^2"}` →
+`storable = true`. Rule 1 is therefore not an extension of the storage model.
+
+**Stage 0 can neither author nor edit an expr-only curve** (measured on the
+shipped module): `build` emits **both** keys on every path, and `hydrate`
+refuses a curve with no `points` into Advanced. Combined with a live corpus of
+**12 stimuli, 5 plots, 6 curves and `expr` on zero of them**, this is what
+disqualified the points-authoritative candidate: it would have made Stage 1 an
+increment observable only on hand-written Advanced JSON, which §16.2 decision 5
+says the normal teacher workflow never requires.
+
+**Failure kinds were already distinguished** before this decision (§16.7.3, and
+measured): a parse failure returns its own teacher-facing sentence, while
+`1/0` parses and returns *"This function has no drawable part in the range you
+set."* `1/0` is empty at **any** density, so row 5 below is non-empty however
+U-5 resolves.
+
+##### The truth table
+
+Outcomes are determined for all eleven rows. **Membership** — which row an
+input lands in — is U-5-dependent for five of them.
+
+| # | curve | storable | today | closed rule | membership |
+|---|---|---|---|---|---|
+| 1 | `points`(≥2), no `expr` | ✓ design | draws | **unchanged** | closed |
+| 2 | `points`(1), no `expr` | ✓ **V-1** | 1-vertex polyline | **unchanged** | closed |
+| 3 | `expr` only, drawable | ✓ design | note | **draws from `expr`** | **U-5** |
+| 4 | `expr` only, **parse failure** | ✓ design | note | **note** | closed |
+| 5 | `expr` only, empty in range | ✓ design | note | **note** | **U-5** |
+| 6 | `expr`+`points`, drawable, agreeing | ✓ design | draws points | **draws from `expr`** | **U-5** |
+| 7 | `expr`+`points`, drawable, **disagreeing** | ✓ design | draws points | **draws from `expr`** | **U-5** |
+| 8 | `expr`+`points`, **parse failure** | ✓ design | draws points | **draws points** | closed |
+| 9 | `expr`+`points`(1 or `[]`), drawable | ✓ **V-1** | invisible / note | **draws from `expr`** | **U-5** |
+| 10 | non-string `expr` + `points` | ✓ **V-1** | draws points | **draws points** | closed |
+| 11 | neither key | ✓ **V-1** | note | **note** | closed |
+
+Rows 1, 2 and 11 are the points-only guarantee. Rows 4 and 5 are where the
+U-4 note **survives**; row 3 is where it **disappears**. **Row 7 is U-1's
+core**, and it is the only row that separates the three candidate rules.
+
+##### The discriminating mutants
+
+Nine of the ten are assertable the moment this rule is implemented; one waits
+for U-5.
+
+| # | Boundary | Test | Mutant killed | U-5? |
+|---|---|---|---|---|
+| **M-1** | row 7 — U-1's core | `{expr:'x^2', points:[straight line]}` → the drawn path is **non-monotonic in y** (a parabola), not monotonic (the line) | prefer `points` | independent |
+| M-2 | row 3 | `{expr:'x^2'}` → a path is drawn, **no** formula note | keep the `unplottable` path | independent |
+| M-3 | rows 1-2 | every points-only fixture still draws, with the **same counts of polyline / circle / polygon and the same labels**, and no formula note | route points-only through the evaluator | independent |
+| M-4 | row 8 | `{expr:'@@bad@@', points:P}` → the points still draw | strict `expr`-only → blank | independent |
+| M-5a | row 4 | `{expr:'@@bad@@'}` → note, nothing drawn | drop the note | independent |
+| M-5b | row 5 | `{expr:'1/0'}` → note, nothing drawn | drop the note | **dependent** |
+| M-6 | row 9 | `{expr:'x^2', points:[[0,0]]}` → a visible path, not a 1-vertex polyline | prefer `points` | independent |
+| M-7 | row 10 | `{expr:123, points:P}` → points draw, evaluator never called | treat a truthy `expr` as an expression | independent |
+| M-8 | O-4 agreement | renderer function count `===` `hydrate('plot', spec).inputs.functions.length` | global grouping | independent |
+| M-9 | **equivalent guard** | reorder the two fallback branches, behaviour identical | **must SURVIVE** | independent |
+
+**M-1 is shape-based on purpose.** Asserting a vertex count would make it
+depend on U-5; asserting the shape does not. Measured on today's renderer: the
+fixture draws the straight line (monotonic in y, 5 vertices), and a real `x^2`
+sampling is non-monotonic. **The live corpus cannot discriminate here** —
+stored points always agree with their `expr` — so the fixture must be built to
+disagree.
+
+**M-3 preserves rendered behaviour, not bytes.** A byte-identical requirement
+would turn an implementation detail into a contract, and density is exactly
+what changes the bytes; if such a guard is wanted it belongs with **U-5** and
+needs its own justification.
+
+**`tests/stimulus-view.test.mjs:112-113` is replaced by M-2 + M-5a, not
+deleted.** The contract *"an expression curve is reported, not dropped in
+silence"* survives verbatim for rows 4 and 5; only its fixture changes, from a
+drawable `x^2` to an expression that cannot be drawn.
+
+##### V-1 · an open defect found while measuring this, NOT fixed here
+
+`exam_stimulus_spec_ok` **fails open** on three curve shapes, through SQL
+three-valued logic rather than by design: `jsonb_typeof()` of an absent key is
+NULL, `NULL or false` is NULL, and `not NULL` never flags the row. Measured on
+production:
+
+| curve | `expr` arm | `points` arm | flagged invalid? |
+|---|---|---|---|
+| `{"expr":"x^2"}` | true | null | false — **by design** |
+| `{"expr":"x^2","points":[[0,0]]}` | true | false | false — **by design** (the ≥2 floor is bypassed) |
+| `{"points":[[0,0]]}` | null | false | **null — fails open** |
+| `{}` | null | null | **null — fails open** |
+| `{"expr":123}` | false | null | **null — fails open** |
+
+So a curve with **neither key** is storable today. This is why rule 4 exists
+and why rows 2, 9, 10 and 11 are in the table at all: the renderer cannot
+assume any shape. **V-1 is recorded, not fixed** — it is a storage-layer
+decision of its own, and Stage 1 changes no database object.
+
+##### What this does NOT close
+
+- **U-5 stays OPEN and is BLOCKING for implementation.** This rule makes the
+  renderer derive its own branches, so `tests/stimulus-editor.test.mjs:419`
+  (two polylines for `1/x`) becomes density-dependent — under a
+  points-authoritative rule it would not have. U-5 must close before the
+  renderer is written.
+- **U-2 stays OPEN.** Nothing here says where the evaluator lives.
+- **U-3 stays OPEN.** Nothing here says which surfaces Stage 1 reaches or when
+  it deploys.
+- **V-1 stays OPEN**, above.
+- **The grammar is consumed, not extended** — "drawable" means exactly what
+  §16.7.1-16.7.4 already define, and §16.7 remains locked.
