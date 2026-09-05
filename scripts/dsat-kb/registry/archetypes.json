@@ -2725,6 +2725,138 @@
       "wrong_route": "use the grand total, or the other margin, as the denominator",
       "distractor_basis": "the cell over its row total, the margin over the grand total, and the two margins against each other",
       "cognitive_demand": "recognising a conditional that is not worded as one"
+    },
+    {
+      "archetype_id": "A-UNIT-LINEAR",
+      "label": "a single conversion factor applied once",
+      "given": "a quantity and one stated equivalence",
+      "find": "the quantity in the other unit",
+      "transformation": "multiply, or divide, by the factor",
+      "hidden_relationship": "none",
+      "representation": "verbal",
+      "wrong_route": "divide where multiplication belongs",
+      "distractor_basis": "the quantity divided by the factor, and the factor applied at the wrong decimal scale",
+      "cognitive_demand": "choosing the direction of one multiplication"
+    },
+    {
+      "archetype_id": "A-UNIT-DOWNSCALE",
+      "label": "a rate expressed in a larger unit, as a fraction",
+      "given": "a rate as a fraction and a whole-number equivalence",
+      "find": "the rate in the larger unit",
+      "transformation": "divide the fraction by the factor",
+      "hidden_relationship": "dividing a fraction by an integer multiplies its denominator, which looks like nothing happened",
+      "representation": "symbolic_algebraic",
+      "wrong_route": "multiply instead, or apply the factor to the numerator",
+      "distractor_basis": "the fraction inverted, the factor applied to the numerator, and the denominator alone",
+      "cognitive_demand": "dividing a fraction without losing which part moves"
+    },
+    {
+      "archetype_id": "A-UNIT-SQUARED",
+      "label": "a conversion between squared units",
+      "given": "an area or an area rate and a LINEAR equivalence",
+      "find": "the quantity in the other squared unit",
+      "transformation": "square the linear factor before applying it",
+      "hidden_relationship": "the stem states the factor for the length and asks about the area, so the factor must be squared and nothing says so",
+      "representation": "verbal",
+      "wrong_route": "apply the linear factor once",
+      "distractor_basis": "the linear factor applied once, applied twice in the wrong direction, and the unsquared answer",
+      "cognitive_demand": "knowing what power an area carries"
+    },
+    {
+      "archetype_id": "A-UNIT-CUBED",
+      "label": "a volume converted through an intermediate unit",
+      "given": "a volume in one system and two equivalences that chain",
+      "find": "the volume in the other system",
+      "transformation": "cube the first factor to reach the intermediate unit, then divide by the second",
+      "hidden_relationship": "one factor is cubed and the other is not, because only the first is a length",
+      "representation": "verbal",
+      "wrong_route": "cube both factors, or neither",
+      "distractor_basis": "the answer with the cube omitted, with both factors cubed, and off by one power of ten",
+      "cognitive_demand": "raising only the factor that needs it"
+    },
+    {
+      "archetype_id": "A-UNIT-PER-SQUARED",
+      "label": "a density expressed per a smaller squared unit",
+      "given": "a quantity per squared unit and a linear equivalence",
+      "find": "the quantity per the smaller squared unit",
+      "transformation": "divide by the square of the factor, because the unit is in the denominator",
+      "hidden_relationship": "a smaller unit in the DENOMINATOR makes the number smaller, which is the opposite of the usual intuition",
+      "representation": "verbal",
+      "wrong_route": "multiply by the squared factor, or apply it unsquared",
+      "distractor_basis": "the four answers a factor of ten to each power gives",
+      "cognitive_demand": "tracking a unit that sits under the line"
+    },
+    {
+      "archetype_id": "A-UNIT-ACCEL",
+      "label": "an acceleration converted in two units at once",
+      "given": "a rate in metres per second squared and one distance equivalence",
+      "find": "the rate in miles per minute squared",
+      "transformation": "multiply by the square of the time factor and divide by the distance factor",
+      "hidden_relationship": "the time conversion is SQUARED and goes the opposite way to the distance one, so the two factors pull apart by more than three orders of magnitude",
+      "representation": "verbal",
+      "wrong_route": "divide by the time factor, or use it unsquared",
+      "distractor_basis": "the answer with the time factor unsquared, inverted, and both mistakes together — which is why one option is zero",
+      "cognitive_demand": "two conversions, one squared, in opposite directions"
+    },
+    {
+      "archetype_id": "A-UNIT-MIXED-RATE",
+      "label": "a rate whose two units are named in different denominators",
+      "given": "a rate stated as \"per hour per second\" and a length equivalence",
+      "find": "the rate in a single squared time unit",
+      "transformation": "reconcile the two time units first, then convert the length",
+      "hidden_relationship": "the quantity is already an acceleration; the stem hides that by naming its two time units separately",
+      "representation": "verbal",
+      "wrong_route": "treat the two time units as one, or square the wrong factor",
+      "distractor_basis": "the answer with the hour left unconverted, and with the length factor inverted",
+      "cognitive_demand": "recognising an acceleration written in disguise"
+    },
+    {
+      "archetype_id": "A-UNIT-RATE-EXPRESSION",
+      "label": "a rate formed from two quantities and left as a fraction",
+      "given": "two quantities in different units",
+      "find": "the rate of one per the other",
+      "transformation": "divide, and leave the result as a fraction",
+      "hidden_relationship": "the answer is smaller than one, and the reciprocal is a whole number, so the wrong order looks tidier",
+      "representation": "verbal",
+      "wrong_route": "invert the ratio because the whole number seems more like an answer",
+      "distractor_basis": "the reciprocal, and both quantities alone",
+      "cognitive_demand": "keeping a unit-bearing fraction the right way up"
+    },
+    {
+      "archetype_id": "A-UNIT-AVERAGE-RATE",
+      "label": "an average rate from a distance and a time",
+      "given": "a distance and a duration",
+      "find": "the average rate",
+      "transformation": "divide",
+      "hidden_relationship": "none — this is the corpus floor",
+      "representation": "verbal",
+      "wrong_route": "multiply, or report one of the two givens",
+      "distractor_basis": "not applicable where the response is student-produced",
+      "cognitive_demand": "one division"
+    },
+    {
+      "archetype_id": "A-UNIT-DENSITY-DIFFERENCE",
+      "label": "a difference of two volumes recovered from one mass and two densities",
+      "given": "a shared mass and two densities",
+      "find": "how much greater one volume is than the other",
+      "transformation": "divide the mass by each density, then subtract",
+      "hidden_relationship": "the lower density gives the LARGER volume, so the subtraction runs opposite to the order the stem names",
+      "representation": "verbal",
+      "wrong_route": "subtract the densities, or take the difference the wrong way round",
+      "distractor_basis": "not applicable where the response is student-produced",
+      "cognitive_demand": "inverting a relationship before comparing"
+    },
+    {
+      "archetype_id": "A-UNIT-VOLUME-UNIT-COST",
+      "label": "a unit cost per volume, with the volume in three different units",
+      "given": "a prism whose dimensions mix feet and inches, a total cost, and two equivalences",
+      "find": "the cost per cubic yard",
+      "transformation": "convert the height to feet, take the volume, convert to cubic yards by dividing by the cube of the factor, then divide the cost",
+      "hidden_relationship": "the yard-to-foot factor must be CUBED for the volume while the inch-to-foot factor is applied linearly to one dimension",
+      "representation": "verbal",
+      "wrong_route": "divide the volume by three rather than by twenty-seven",
+      "distractor_basis": "not applicable where the response is student-produced",
+      "cognitive_demand": "applying two factors at two different powers in one item"
     }
   ]
 }

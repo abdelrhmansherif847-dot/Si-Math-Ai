@@ -21,6 +21,17 @@ import { PROVENANCE_SIGNALS, HARD_EXCLUDED_SHA256 } from './schema.mjs';
 // Inflate every FlateDecode stream we can, and return the concatenated result.
 // Streams that fail to inflate are skipped: a PDF may use filters we do not
 // implement, and one unreadable stream must not lose the rest.
+// The stream dictionary's /Length, if it is a direct integer. An indirect
+// reference (`/Length 12 0 R`) is not resolved here and returns null, which
+// simply falls the caller back to the byte heuristics.
+function declaredLength(hay, streamKeywordIndex) {
+  const dict = hay.slice(Math.max(0, streamKeywordIndex - 2000), streamKeywordIndex);
+  const open = dict.lastIndexOf('<<');
+  if (open < 0) return null;
+  const m = /\/Length\s+(\d+)(?!\s+\d+\s+R)/.exec(dict.slice(open));
+  return m ? Number(m[1]) : null;
+}
+
 export function inflateAll(buf) {
   const out = [];
   const hay = buf.toString('latin1');
@@ -33,12 +44,32 @@ export function inflateAll(buf) {
     const start = m.index + m[0].length;
     const end = hay.indexOf('endstream', start);
     if (end < 0) continue;
-    // Trim the EOL that precedes `endstream`; zlib rejects trailing bytes.
-    let stop = end;
-    while (stop > start && (hay[stop - 1] === '\n' || hay[stop - 1] === '\r')) stop--;
-    const slice = buf.subarray(start, stop);
-    for (const fn of [inflateSync, inflateRawSync]) {
-      try { out.push(fn(slice).toString('latin1')); break; } catch { /* try the next */ }
+    // TWO candidate ends, and NEITHER of them trims.
+    //
+    // The code here used to walk back over trailing EOL bytes, justified by a
+    // comment saying "zlib rejects trailing bytes". That is not true: node's
+    // inflateSync ignores anything after the deflate stream ends. The trim was
+    // never needed, and it actively destroyed streams — it cannot tell a
+    // separator from compressed data that merely ENDS in 0x0A or 0x0D, and when
+    // it guessed wrong it lost the whole stream rather than one byte. On
+    // Units_24.pdf that was the entire page tree: /Length 22100, 22101 bytes to
+    // `endstream`, 22099 after the trim, 140 KB of structure silently gone and
+    // pageCount returning null while the run looked like it had worked.
+    //
+    // The dictionary's /Length is preferred because it is a fact rather than a
+    // guess; the raw end is the fallback when it is absent or indirect.
+    const declared = declaredLength(hay, m.index);
+    const stops = [];
+    if (declared !== null && start + declared <= end) stops.push(start + declared);
+    stops.push(end);
+
+    for (const stop of stops) {
+      let done = false;
+      for (const fn of [inflateSync, inflateRawSync]) {
+        try { out.push(fn(buf.subarray(start, stop)).toString('latin1')); done = true; break; }
+        catch { /* try the next decoder */ }
+      }
+      if (done) break;
     }
     re.lastIndex = end + 9;
   }

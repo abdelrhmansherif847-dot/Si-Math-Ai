@@ -13,7 +13,7 @@ import { gate } from '../scripts/dsat-kb/gate.mjs';
 import { insideRepo, assertCorpusOutsideRepo, REPO_ROOT } from '../scripts/dsat-kb/registry.mjs';
 import { HARD_EXCLUDED_SHA256, OBSERVED_TOPICS } from '../scripts/dsat-kb/schema.mjs';
 import { pageCount, provenanceScan, inflateAll, contentText, looksLikeText } from '../scripts/dsat-kb/pdf.mjs';
-import { deflateSync } from 'node:zlib';
+import { deflateSync, inflateSync } from 'node:zlib';
 import { readFileSync, existsSync } from 'node:fs';
 import { SIMILARITY, SIMILARITY_THRESHOLDS, structuralFingerprint, mathematicalFingerprint, classifyPair,
   eraseNumerals, eraseNames, eraseIncidentals } from '../scripts/dsat-kb/fingerprint.mjs';
@@ -293,6 +293,45 @@ console.log('\n── D-2: page counting survives compressed cross-reference str
   } else {
     ok(true, 'D-2 corpus file not present on this machine — page-count checks skipped');
   }
+}
+
+console.log('\n── D-2: a compressed stream is not bounded by looking at its last byte ──');
+{
+  // inflateAll used to walk back over trailing EOL bytes before inflating,
+  // justified by a comment claiming "zlib rejects trailing bytes". IT DOES NOT —
+  // node's inflateSync ignores anything after the deflate stream ends. The trim
+  // was never needed and it destroyed streams, because it cannot tell a
+  // separator from compressed data that merely ENDS in 0x0A or 0x0D. On
+  // Units_24.pdf that cost the entire page tree: 140 KB, pageCount null, and a
+  // run that otherwise looked like it had worked.
+  //
+  // This searches for a payload whose deflate output ends in an EOL rather than
+  // asserting a lucky constant, so it cannot rot into a vacuous pass.
+  let payload = null;
+  for (let i = 0; i < 4000 && payload === null; i++) {
+    const body = `<</Type/Pages/Count 6>> filler ${i}`;
+    const z = deflateSync(Buffer.from(body, 'latin1'));
+    if (z[z.length - 1] === 0x0a || z[z.length - 1] === 0x0d) payload = { body, z };
+  }
+  ok(payload !== null, 'found a deflate payload whose last byte is an EOL (the whole point of the case)');
+
+  if (payload) {
+    const pdf = Buffer.concat([
+      Buffer.from(`5 0 obj<</Type/ObjStm/Filter/FlateDecode/Length ${payload.z.length}>>stream\n`),
+      payload.z,
+      Buffer.from('\nendstream endobj\n'),
+    ]);
+    ok(inflateAll(pdf).includes('/Count 6'),
+       'a stream whose data ends in an EOL byte still inflates');
+    ok(pageCount(pdf).pages === 6,
+       'and the page tree inside it is readable, so pageCount does not return null');
+  }
+
+  // The premise the deleted trim rested on, asserted directly so it cannot be
+  // reintroduced on the same false belief.
+  const z = deflateSync(Buffer.from('hello', 'latin1'));
+  ok(inflateSync(Buffer.concat([z, Buffer.from('\n')])).toString() === 'hello',
+     'zlib tolerates a trailing byte — the reason the trim existed is not true');
 }
 
 console.log('\n── D-1: the text signals are reachable from the pipeline, not just from a test ──');

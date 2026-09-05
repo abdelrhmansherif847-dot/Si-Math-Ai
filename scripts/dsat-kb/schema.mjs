@@ -274,6 +274,7 @@ export const OBSERVED_TOPICS = [
   // seen in the trigonometry corpus, 2026-09-05
   'trigonometry',
   'probability',
+  'unit_conversion',
 ];
 
 // ── the copyright guard ──────────────────────────────────────────────────────

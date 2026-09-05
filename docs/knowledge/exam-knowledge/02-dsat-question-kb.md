@@ -1806,3 +1806,142 @@ CI **84/84 green** · 14 sources, 740 questions, 227 archetypes, 32 conflicts
 every exam artifact are untouched.
 
 *Eleventh ingestion, 2026-09-05.*
+
+---
+
+## 28. Twelfth ingestion: the unit-conversion corpus — and a defect in the pipeline it exposed
+
+`177ca08e-Units_24.pdf` — sha256 `4603e2537a2d…`, 218,551 bytes, **6 pages**,
+**25 items** on pages 1–5 with a key on page 6 covering all 25. Registered as
+**S-015**.
+
+### The pipeline could not count its pages, and the reason was a false premise
+
+The ingestion opened with `pages ? (/Count=null page objects=null)`. Every
+earlier file had resolved both routes.
+
+This file keeps its page tree entirely inside one compressed object stream, and
+`inflateAll` could not read that stream. The cause was not the compression —
+D-2 already handles that — but a line of the inflater that walked back over
+trailing EOL bytes before decompressing, justified by a comment saying **"zlib
+rejects trailing bytes."**
+
+**That is not true.** Node's `inflateSync` ignores anything after the deflate
+stream ends. The trim was never needed, and it cannot tell a separator from
+compressed data that merely *ends* in `0x0A` or `0x0D`. When it guessed wrong it
+did not lose a byte, it lost the whole stream. Here: `/Length` 22100, 22101 bytes
+to `endstream`, **22099** after the trim, and 140 KB of structure silently gone.
+
+The fix removes the trim and prefers the dictionary's `/Length`, which is a fact
+rather than a guess. Blast radius, measured across all 22 PDFs in the scratchpad:
+
+| | |
+|---|---|
+| files whose inflated output grew | **9 of 22** |
+| largest recovery | a practice test, 13.2 MB → 15.5 MB |
+| page counts changed | **1** — this file, `null` → 6 |
+| URI counts, text lengths, or any ingested result changed | **0** |
+
+So the fix is purely additive: it recovers real data and overturns no earlier
+conclusion.
+
+**The regression test took two attempts.** The first version passed under both
+mutants — vacuous, exactly what this project has a rule against. Rewritten, it
+now asserts the thing that can fail (a stream whose data ends in an EOL still
+inflates) and asserts the false premise directly (`zlib` tolerates a trailing
+byte), and it goes **red** when the old trim is reintroduced while staying green
+when the trim is merely reordered behind the good candidates.
+
+### The file itself
+
+The filename says 24 and the document holds **25** — the third file here to
+undercount by exactly one, after S-012 (66 of 67) and S-014 (18 of 19). Its
+heading is *Unit Conversion*, not "Units". **SRC-0022.**
+
+Like S-013 and S-014, it carries **no Telegram annotation and no watermark**;
+three files in a row now share that profile.
+
+### 24 of 25, and the twenty-fifth is the key's fault
+
+Five items convert an acceleration from metres per second squared to miles per
+minute squared. Four of their keys are right:
+
+| item | rate | exact | key |
+|---|---|---|---|
+| 6 | 6.80 | 15.2144 | 15.2 ✓ |
+| 11 | 3.9 | 8.7259 | 8.7 ✓ |
+| 13 | 12.1 | 27.0727 | 27.1 ✓ |
+| 14 | 5.70 | 12.7533 | 12.8 ✓ |
+| **16** | **1.1** | **2.4612** | **A = 0 ✗** (should be B = 2.5) |
+
+The same formula gives the right answer four times and the wrong one once, so
+the formula is not in doubt. Zero is what inverting the squared time factor
+produces — the item's own trap, and the key walked into it. **SRC-0021**,
+confirmed against a render of the page.
+
+### A cross-file duplicate that surfaced by itself
+
+Item 19 is not a unit conversion at all: it is the conditional-probability item
+from a table of age proportions — the same construction as **item 5 of S-014**,
+with 34/23/22/21 where that one had 27/24/28/21.
+
+It was coded under the archetype the probability corpus had already defined
+rather than a new one, and the grouping then found the match on its own:
+
+```
+DG-0111 [CROSS-FILE]  A-PROB-CONDITIONAL-PROPORTION
+    Q-014-p1-q5    Probability_18_Real_Questions
+    Q-015-p4-q19   Units_24
+```
+
+That is the fourth cross-file group, and it is the direct payoff of the
+correction made during the trigonometry ingestion: **one construction, one
+archetype.** Had this been given a fresh `A-UNIT-*` name, the overlap would have
+been invisible exactly as the triangles/trigonometry one was.
+
+### What 25 items were worth
+
+**11 new constructions** plus one reused. **13 distinct mathematical
+fingerprints for 25 items.**
+
+One operation runs through the whole file — multiply by a conversion factor —
+and every bit of difficulty is in **what power the factor carries and which
+direction it goes**:
+
+- 5 items square a linear factor because the quantity is an area,
+- 5 square the *time* factor while dividing by the distance factor, in opposite
+  directions,
+- 2 cube a factor for a volume while applying another linearly to one dimension,
+- 1 divides by a squared factor because the unit sits in the denominator,
+- 1 cubes one of its two factors and not the other.
+
+`multiconcept` is load-bearing on 7 of 25, its highest share in any corpus here,
+and it always means the same thing: **two factors at two different powers in one
+item.**
+
+### Repetition, across ten sets from one compiler
+
+| ingestion | records in a duplicate group |
+|---|---|
+| polynomials, block A | 43% |
+| linear systems | 48% |
+| circles | 60% |
+| areas & volumes | 51% |
+| triangles | 38% |
+| statistics | 37% |
+| percent & ratio | 43% |
+| trigonometry | 54% |
+| probability | 53% |
+| unit conversion | **68%** |
+
+**37%–68% over ten sets.** This is the highest yet, and on 25 items the largest
+family alone — four squared-unit conversions — is 16% of the file.
+
+### Standing state
+
+CI **84/84 green** · 15 sources, 765 questions, 238 archetypes, 34 conflicts
+(12 taxonomy + **22** source, all open) · 117 duplicate groups, **4 of them
+cross-file**. `taxonomy.core.js`, the KDG, the generator, the EST system and
+every exam artifact are untouched.
+
+*Twelfth ingestion, 2026-09-05.*

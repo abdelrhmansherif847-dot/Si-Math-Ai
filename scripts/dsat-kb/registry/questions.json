@@ -71021,7 +71021,8 @@
         "rep:table",
         "stim:table",
         "tgt:value"
-      ]
+      ],
+      "duplicate_group": "DG-0111"
     },
     {
       "question_id": "Q-014-p1-q6",
@@ -72330,6 +72331,2389 @@
         "rel:fraction = cell / column_total",
         "rep:table",
         "stim:table",
+        "tgt:value"
+      ]
+    },
+    {
+      "question_id": "Q-015-p1-q1",
+      "source_id": "S-015",
+      "source_file": "177ca08e-Units_24.pdf",
+      "source_page": 1,
+      "source_question_number": "1",
+      "source_block": "A",
+      "source_label": "Unit Conversion",
+      "source_administration": "March US 2023",
+      "observed_topic": "unit_conversion",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "25 administration tags over 17 named administrations; no Telegram annotation and no watermark, matching S-013 and S-014",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Units and Rates",
+      "taxonomy_subtopics": [
+        "PR_005"
+      ],
+      "knowledge_nodes": [
+        "N-UNITS"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "verbal",
+      "target_type": "value",
+      "archetype": "A-UNIT-DENSITY-DIFFERENCE",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "reversal",
+          "load_bearing": true,
+          "counterfactual": "the LOWER density gives the larger volume, so the subtraction runs opposite to the order the stem names"
+        },
+        {
+          "id": "nonobvious_relationship",
+          "load_bearing": true,
+          "counterfactual": "the shared mass cancels nothing — it must be divided by each density separately"
+        }
+      ],
+      "distractor_logic": [],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "student_produced_response",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "two_samples"
+        ],
+        "relations": [
+          "volume = mass / density",
+          "difference = volume_b - volume_a"
+        ],
+        "given_roles": [
+          "value",
+          "value",
+          "value"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "shared_mass",
+          "lower_density_gives_larger_volume"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 3,
+      "observed_notes": "section heading: Unit Conversion; agrees with the printed key",
+      "structural_fingerprint": "e3da12762098cf9b",
+      "mathematical_fingerprint": "25059c2b87a00578",
+      "fingerprint_components": [
+        "ans:student_produced_response",
+        "ask:value",
+        "con:lower_density_gives_larger_volume",
+        "con:shared_mass",
+        "giv:value",
+        "mech:nonobvious_relationship",
+        "mech:reversal",
+        "obj:two_samples",
+        "rel:difference = volume_v1 - volume_v2",
+        "rel:volume = mass / density",
+        "rep:verbal",
+        "stim:none",
+        "tgt:value"
+      ]
+    },
+    {
+      "question_id": "Q-015-p1-q2",
+      "source_id": "S-015",
+      "source_file": "177ca08e-Units_24.pdf",
+      "source_page": 1,
+      "source_question_number": "2",
+      "source_block": "A",
+      "source_label": "Unit Conversion",
+      "source_administration": "March US 2023",
+      "observed_topic": "unit_conversion",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "25 administration tags over 17 named administrations; no Telegram annotation and no watermark, matching S-013 and S-014",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Units and Rates",
+      "taxonomy_subtopics": [
+        "PR_005"
+      ],
+      "knowledge_nodes": [
+        "N-UNITS"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "verbal",
+      "target_type": "value",
+      "archetype": "A-UNIT-RATE-EXPRESSION",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "trap_cost",
+          "load_bearing": true,
+          "counterfactual": "the reciprocal is a whole number and the answer is a fraction below one, so the wrong order looks tidier"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "reversal_error",
+          "wrong_route": "the reciprocal reported"
+        },
+        {
+          "category": "wrong_interpretation",
+          "wrong_route": "the area reported"
+        },
+        {
+          "category": "arithmetic_slip",
+          "wrong_route": "the wrong pair divided"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "two_quantities"
+        ],
+        "relations": [
+          "rate = first / second"
+        ],
+        "given_roles": [
+          "value",
+          "value"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "answer_is_a_fraction_below_one"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 1,
+      "observed_notes": "section heading: Unit Conversion; agrees with the printed key",
+      "structural_fingerprint": "f954e94fc7cba250",
+      "mathematical_fingerprint": "f851f9b74c3ba0b2",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:value",
+        "con:answer_is_a_fraction_below_one",
+        "dis:arithmetic_slip",
+        "dis:reversal_error",
+        "dis:wrong_interpretation",
+        "giv:value",
+        "mech:trap_cost",
+        "obj:two_quantities",
+        "rel:rate = first / second",
+        "rep:verbal",
+        "stim:none",
+        "tgt:value"
+      ]
+    },
+    {
+      "question_id": "Q-015-p1-q3",
+      "source_id": "S-015",
+      "source_file": "177ca08e-Units_24.pdf",
+      "source_page": 1,
+      "source_question_number": "3",
+      "source_block": "A",
+      "source_label": "Unit Conversion",
+      "source_administration": "March US 2023",
+      "observed_topic": "unit_conversion",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "25 administration tags over 17 named administrations; no Telegram annotation and no watermark, matching S-013 and S-014",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Units and Rates",
+      "taxonomy_subtopics": [
+        "PR_005"
+      ],
+      "knowledge_nodes": [
+        "N-UNITS"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "verbal",
+      "target_type": "value",
+      "archetype": "A-UNIT-SQUARED",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "nonobvious_relationship",
+          "load_bearing": true,
+          "counterfactual": "the stem gives the factor for the LENGTH and asks about an area, so the factor must be squared and nothing says so"
+        },
+        {
+          "id": "trap_cost",
+          "load_bearing": true,
+          "counterfactual": "the answer with the factor applied once is printed"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "incomplete_reasoning",
+          "wrong_route": "the linear factor applied once instead of squared"
+        },
+        {
+          "category": "reversal_error",
+          "wrong_route": "the squared factor applied in the wrong direction"
+        },
+        {
+          "category": "arithmetic_slip",
+          "wrong_route": "the time conversion omitted"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "area_rate"
+        ],
+        "relations": [
+          "area_factor = length_factor^2",
+          "converted = quantity / area_factor"
+        ],
+        "given_roles": [
+          "value",
+          "factor"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "linear_factor_given_area_asked"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 3,
+      "observed_notes": "section heading: Unit Conversion; agrees with the printed key",
+      "structural_fingerprint": "eff54181e65ecb31",
+      "mathematical_fingerprint": "5c89200dc7bd9834",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:value",
+        "con:linear_factor_given_area_asked",
+        "dis:arithmetic_slip",
+        "dis:incomplete_reasoning",
+        "dis:reversal_error",
+        "giv:factor",
+        "giv:value",
+        "mech:nonobvious_relationship",
+        "mech:trap_cost",
+        "obj:area_rate",
+        "rel:area_factor = length_factor^#",
+        "rel:converted = quantity / area_factor",
+        "rep:verbal",
+        "stim:none",
+        "tgt:value"
+      ],
+      "duplicate_group": "DG-0112"
+    },
+    {
+      "question_id": "Q-015-p1-q4",
+      "source_id": "S-015",
+      "source_file": "177ca08e-Units_24.pdf",
+      "source_page": 1,
+      "source_question_number": "4",
+      "source_block": "A",
+      "source_label": "Unit Conversion",
+      "source_administration": "June 2023",
+      "observed_topic": "unit_conversion",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "25 administration tags over 17 named administrations; no Telegram annotation and no watermark, matching S-013 and S-014",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Units and Rates",
+      "taxonomy_subtopics": [
+        "PR_005"
+      ],
+      "knowledge_nodes": [
+        "N-UNITS"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "verbal",
+      "target_type": "value",
+      "archetype": "A-UNIT-LINEAR",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "trap_cost",
+          "load_bearing": true,
+          "counterfactual": "the quantity divided by the factor is printed, and so is the factor applied at the wrong decimal scale"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "reversal_error",
+          "wrong_route": "the quantity divided by the factor"
+        },
+        {
+          "category": "arithmetic_slip",
+          "wrong_route": "the factor applied at the wrong decimal scale"
+        },
+        {
+          "category": "arithmetic_slip",
+          "wrong_route": "the factor applied twice"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "quantity"
+        ],
+        "relations": [
+          "converted = quantity * factor"
+        ],
+        "given_roles": [
+          "value",
+          "factor"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "single_factor_single_direction"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 1,
+      "observed_notes": "section heading: Unit Conversion; agrees with the printed key",
+      "structural_fingerprint": "5b676a01353c666d",
+      "mathematical_fingerprint": "c78f64c42dc3495c",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:value",
+        "con:single_factor_single_direction",
+        "dis:arithmetic_slip",
+        "dis:reversal_error",
+        "giv:factor",
+        "giv:value",
+        "mech:trap_cost",
+        "obj:quantity",
+        "rel:converted = quantity * factor",
+        "rep:verbal",
+        "stim:none",
+        "tgt:value"
+      ],
+      "duplicate_group": "DG-0113"
+    },
+    {
+      "question_id": "Q-015-p2-q5",
+      "source_id": "S-015",
+      "source_file": "177ca08e-Units_24.pdf",
+      "source_page": 2,
+      "source_question_number": "5",
+      "source_block": "A",
+      "source_label": "Unit Conversion",
+      "source_administration": "August US 2023",
+      "observed_topic": "unit_conversion",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "25 administration tags over 17 named administrations; no Telegram annotation and no watermark, matching S-013 and S-014",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Units and Rates",
+      "taxonomy_subtopics": [
+        "PR_005"
+      ],
+      "knowledge_nodes": [
+        "N-UNITS"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "verbal",
+      "target_type": "value",
+      "archetype": "A-UNIT-AVERAGE-RATE",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "filtering",
+          "load_bearing": true,
+          "counterfactual": "the two quantities are already in the units the answer wants, so no factor applies"
+        }
+      ],
+      "distractor_logic": [],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "student_produced_response",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "distance",
+          "time"
+        ],
+        "relations": [
+          "rate = distance / time"
+        ],
+        "given_roles": [
+          "value",
+          "value"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "no_conversion_required"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 1,
+      "observed_notes": "section heading: Unit Conversion; agrees with the printed key",
+      "structural_fingerprint": "e681331d1c240c35",
+      "mathematical_fingerprint": "37cc88cd5714b0e7",
+      "fingerprint_components": [
+        "ans:student_produced_response",
+        "ask:value",
+        "con:no_conversion_required",
+        "giv:value",
+        "mech:filtering",
+        "obj:distance",
+        "obj:time",
+        "rel:rate = distance / time",
+        "rep:verbal",
+        "stim:none",
+        "tgt:value"
+      ]
+    },
+    {
+      "question_id": "Q-015-p2-q6",
+      "source_id": "S-015",
+      "source_file": "177ca08e-Units_24.pdf",
+      "source_page": 2,
+      "source_question_number": "6",
+      "source_block": "A",
+      "source_label": "Unit Conversion",
+      "source_administration": "August US 2023",
+      "observed_topic": "unit_conversion",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "25 administration tags over 17 named administrations; no Telegram annotation and no watermark, matching S-013 and S-014",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Units and Rates",
+      "taxonomy_subtopics": [
+        "PR_005"
+      ],
+      "knowledge_nodes": [
+        "N-UNITS"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "verbal",
+      "target_type": "value",
+      "archetype": "A-UNIT-ACCEL",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "multiconcept",
+          "load_bearing": true,
+          "counterfactual": "the time factor is SQUARED and multiplies while the distance factor divides, so the two pull in opposite directions"
+        },
+        {
+          "id": "trap_cost",
+          "load_bearing": true,
+          "counterfactual": "one option is zero, which is what inverting the squared time factor produces"
+        }
+      ],
+      "distractor_logic": [],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "student_produced_response",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "acceleration"
+        ],
+        "relations": [
+          "converted = rate * time_factor^2 / distance_factor"
+        ],
+        "given_roles": [
+          "value",
+          "factor"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "two_factors_opposite_directions",
+          "one_of_them_squared",
+          "answer_rounded_to_a_tenth"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 3,
+      "observed_notes": "section heading: Unit Conversion; agrees with the printed key",
+      "structural_fingerprint": "aaed6b3abda4531f",
+      "mathematical_fingerprint": "33c5d7762c862c7f",
+      "fingerprint_components": [
+        "ans:student_produced_response",
+        "ask:value",
+        "con:answer_rounded_to_a_tenth",
+        "con:one_of_them_squared",
+        "con:two_factors_opposite_directions",
+        "giv:factor",
+        "giv:value",
+        "mech:multiconcept",
+        "mech:trap_cost",
+        "obj:acceleration",
+        "rel:converted = rate * time_factor^# / distance_factor",
+        "rep:verbal",
+        "stim:none",
+        "tgt:value"
+      ],
+      "duplicate_group": "DG-0114"
+    },
+    {
+      "question_id": "Q-015-p2-q7",
+      "source_id": "S-015",
+      "source_file": "177ca08e-Units_24.pdf",
+      "source_page": 2,
+      "source_question_number": "7",
+      "source_block": "A",
+      "source_label": "Unit Conversion",
+      "source_administration": "November 2023",
+      "observed_topic": "unit_conversion",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "25 administration tags over 17 named administrations; no Telegram annotation and no watermark, matching S-013 and S-014",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Units and Rates",
+      "taxonomy_subtopics": [
+        "PR_005"
+      ],
+      "knowledge_nodes": [
+        "N-UNITS"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "verbal",
+      "target_type": "value",
+      "archetype": "A-UNIT-VOLUME-UNIT-COST",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "multiconcept",
+          "load_bearing": true,
+          "counterfactual": "one factor is applied linearly to a single dimension and the other is CUBED for the volume"
+        },
+        {
+          "id": "hidden_step",
+          "load_bearing": true,
+          "counterfactual": "the height is stated in inches while the base is in feet, so a conversion precedes the volume"
+        }
+      ],
+      "distractor_logic": [],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "student_produced_response",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "rectangular_prism",
+          "cost"
+        ],
+        "relations": [
+          "volume = width * length * height",
+          "cubic_factor = linear_factor^3",
+          "unit_cost = cost / volume"
+        ],
+        "given_roles": [
+          "length",
+          "length",
+          "length",
+          "value",
+          "factor",
+          "factor"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "two_factors_at_two_different_powers",
+          "mixed_units_in_the_dimensions"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 4,
+      "observed_notes": "section heading: Unit Conversion; agrees with the printed key",
+      "structural_fingerprint": "801c7d91ba2ae045",
+      "mathematical_fingerprint": "6121a4c6602e1e90",
+      "fingerprint_components": [
+        "ans:student_produced_response",
+        "ask:value",
+        "con:mixed_units_in_the_dimensions",
+        "con:two_factors_at_two_different_powers",
+        "giv:factor",
+        "giv:length",
+        "giv:value",
+        "mech:hidden_step",
+        "mech:multiconcept",
+        "obj:cost",
+        "obj:rectangular_prism",
+        "rel:cubic_factor = linear_factor^#",
+        "rel:unit_cost = cost / volume",
+        "rel:volume = width * length * height",
+        "rep:verbal",
+        "stim:none",
+        "tgt:value"
+      ],
+      "duplicate_group": "DG-0115"
+    },
+    {
+      "question_id": "Q-015-p2-q8",
+      "source_id": "S-015",
+      "source_file": "177ca08e-Units_24.pdf",
+      "source_page": 2,
+      "source_question_number": "8",
+      "source_block": "A",
+      "source_label": "Unit Conversion",
+      "source_administration": "March 2024",
+      "observed_topic": "unit_conversion",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "25 administration tags over 17 named administrations; no Telegram annotation and no watermark, matching S-013 and S-014",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Units and Rates",
+      "taxonomy_subtopics": [
+        "PR_005"
+      ],
+      "knowledge_nodes": [
+        "N-UNITS"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "verbal",
+      "target_type": "value",
+      "archetype": "A-UNIT-SQUARED",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "nonobvious_relationship",
+          "load_bearing": true,
+          "counterfactual": "the stem gives the factor for the LENGTH and asks about an area, so the factor must be squared and nothing says so"
+        },
+        {
+          "id": "trap_cost",
+          "load_bearing": true,
+          "counterfactual": "the answer with the factor applied once is printed"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "incomplete_reasoning",
+          "wrong_route": "the linear factor applied once instead of squared"
+        },
+        {
+          "category": "reversal_error",
+          "wrong_route": "the squared factor applied in the wrong direction"
+        },
+        {
+          "category": "arithmetic_slip",
+          "wrong_route": "the time conversion omitted"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "area_rate"
+        ],
+        "relations": [
+          "area_factor = length_factor^2",
+          "converted = quantity / area_factor"
+        ],
+        "given_roles": [
+          "value",
+          "factor"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "linear_factor_given_area_asked"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 3,
+      "observed_notes": "section heading: Unit Conversion; agrees with the printed key",
+      "structural_fingerprint": "eff54181e65ecb31",
+      "mathematical_fingerprint": "5c89200dc7bd9834",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:value",
+        "con:linear_factor_given_area_asked",
+        "dis:arithmetic_slip",
+        "dis:incomplete_reasoning",
+        "dis:reversal_error",
+        "giv:factor",
+        "giv:value",
+        "mech:nonobvious_relationship",
+        "mech:trap_cost",
+        "obj:area_rate",
+        "rel:area_factor = length_factor^#",
+        "rel:converted = quantity / area_factor",
+        "rep:verbal",
+        "stim:none",
+        "tgt:value"
+      ],
+      "duplicate_group": "DG-0112"
+    },
+    {
+      "question_id": "Q-015-p2-q9",
+      "source_id": "S-015",
+      "source_file": "177ca08e-Units_24.pdf",
+      "source_page": 2,
+      "source_question_number": "9",
+      "source_block": "A",
+      "source_label": "Unit Conversion",
+      "source_administration": "May 2024",
+      "observed_topic": "unit_conversion",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "25 administration tags over 17 named administrations; no Telegram annotation and no watermark, matching S-013 and S-014",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Units and Rates",
+      "taxonomy_subtopics": [
+        "PR_005"
+      ],
+      "knowledge_nodes": [
+        "N-UNITS"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "verbal",
+      "target_type": "value",
+      "archetype": "A-UNIT-SQUARED",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "nonobvious_relationship",
+          "load_bearing": true,
+          "counterfactual": "the stem gives the factor for the LENGTH and asks about an area, so the factor must be squared and nothing says so"
+        },
+        {
+          "id": "trap_cost",
+          "load_bearing": true,
+          "counterfactual": "the answer with the factor applied once is printed"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "incomplete_reasoning",
+          "wrong_route": "the linear factor applied once instead of squared"
+        },
+        {
+          "category": "reversal_error",
+          "wrong_route": "the squared factor applied in the wrong direction"
+        },
+        {
+          "category": "arithmetic_slip",
+          "wrong_route": "the time conversion omitted"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "area_rate"
+        ],
+        "relations": [
+          "area_factor = length_factor^2",
+          "converted = quantity / area_factor"
+        ],
+        "given_roles": [
+          "value",
+          "factor"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "linear_factor_given_area_asked"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 3,
+      "observed_notes": "section heading: Unit Conversion; agrees with the printed key",
+      "structural_fingerprint": "eff54181e65ecb31",
+      "mathematical_fingerprint": "5c89200dc7bd9834",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:value",
+        "con:linear_factor_given_area_asked",
+        "dis:arithmetic_slip",
+        "dis:incomplete_reasoning",
+        "dis:reversal_error",
+        "giv:factor",
+        "giv:value",
+        "mech:nonobvious_relationship",
+        "mech:trap_cost",
+        "obj:area_rate",
+        "rel:area_factor = length_factor^#",
+        "rel:converted = quantity / area_factor",
+        "rep:verbal",
+        "stim:none",
+        "tgt:value"
+      ],
+      "duplicate_group": "DG-0112"
+    },
+    {
+      "question_id": "Q-015-p2-q10",
+      "source_id": "S-015",
+      "source_file": "177ca08e-Units_24.pdf",
+      "source_page": 2,
+      "source_question_number": "10",
+      "source_block": "A",
+      "source_label": "Unit Conversion",
+      "source_administration": "March 2024",
+      "observed_topic": "unit_conversion",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "25 administration tags over 17 named administrations; no Telegram annotation and no watermark, matching S-013 and S-014",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Units and Rates",
+      "taxonomy_subtopics": [
+        "PR_005"
+      ],
+      "knowledge_nodes": [
+        "N-UNITS"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "verbal",
+      "target_type": "value",
+      "archetype": "A-UNIT-LINEAR",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "trap_cost",
+          "load_bearing": true,
+          "counterfactual": "the quantity divided by the factor is printed, and so is the factor applied at the wrong decimal scale"
+        }
+      ],
+      "distractor_logic": [],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "student_produced_response",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "quantity"
+        ],
+        "relations": [
+          "converted = quantity * factor"
+        ],
+        "given_roles": [
+          "value",
+          "factor"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "single_factor_single_direction"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 1,
+      "observed_notes": "section heading: Unit Conversion; agrees with the printed key",
+      "structural_fingerprint": "f8d5b7657dbeb4f4",
+      "mathematical_fingerprint": "c78f64c42dc3495c",
+      "fingerprint_components": [
+        "ans:student_produced_response",
+        "ask:value",
+        "con:single_factor_single_direction",
+        "giv:factor",
+        "giv:value",
+        "mech:trap_cost",
+        "obj:quantity",
+        "rel:converted = quantity * factor",
+        "rep:verbal",
+        "stim:none",
+        "tgt:value"
+      ],
+      "duplicate_group": "DG-0116"
+    },
+    {
+      "question_id": "Q-015-p3-q11",
+      "source_id": "S-015",
+      "source_file": "177ca08e-Units_24.pdf",
+      "source_page": 3,
+      "source_question_number": "11",
+      "source_block": "A",
+      "source_label": "Unit Conversion",
+      "source_administration": "May US 2024",
+      "observed_topic": "unit_conversion",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "25 administration tags over 17 named administrations; no Telegram annotation and no watermark, matching S-013 and S-014",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Units and Rates",
+      "taxonomy_subtopics": [
+        "PR_005"
+      ],
+      "knowledge_nodes": [
+        "N-UNITS"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "verbal",
+      "target_type": "value",
+      "archetype": "A-UNIT-ACCEL",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "multiconcept",
+          "load_bearing": true,
+          "counterfactual": "the time factor is SQUARED and multiplies while the distance factor divides, so the two pull in opposite directions"
+        },
+        {
+          "id": "trap_cost",
+          "load_bearing": true,
+          "counterfactual": "one option is zero, which is what inverting the squared time factor produces"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "reversal_error",
+          "wrong_route": "the squared time factor divided rather than multiplied, giving zero to one decimal"
+        },
+        {
+          "category": "incomplete_reasoning",
+          "wrong_route": "the time factor applied unsquared"
+        },
+        {
+          "category": "arithmetic_slip",
+          "wrong_route": "the distance factor multiplied rather than divided"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "acceleration"
+        ],
+        "relations": [
+          "converted = rate * time_factor^2 / distance_factor"
+        ],
+        "given_roles": [
+          "value",
+          "factor"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "two_factors_opposite_directions",
+          "one_of_them_squared",
+          "answer_rounded_to_a_tenth"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 3,
+      "observed_notes": "section heading: Unit Conversion; agrees with the printed key",
+      "structural_fingerprint": "00b279680ffa7b93",
+      "mathematical_fingerprint": "33c5d7762c862c7f",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:value",
+        "con:answer_rounded_to_a_tenth",
+        "con:one_of_them_squared",
+        "con:two_factors_opposite_directions",
+        "dis:arithmetic_slip",
+        "dis:incomplete_reasoning",
+        "dis:reversal_error",
+        "giv:factor",
+        "giv:value",
+        "mech:multiconcept",
+        "mech:trap_cost",
+        "obj:acceleration",
+        "rel:converted = rate * time_factor^# / distance_factor",
+        "rep:verbal",
+        "stim:none",
+        "tgt:value"
+      ],
+      "duplicate_group": "DG-0117"
+    },
+    {
+      "question_id": "Q-015-p3-q12",
+      "source_id": "S-015",
+      "source_file": "177ca08e-Units_24.pdf",
+      "source_page": 3,
+      "source_question_number": "12",
+      "source_block": "A",
+      "source_label": "Unit Conversion",
+      "source_administration": "August 2024",
+      "observed_topic": "unit_conversion",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "25 administration tags over 17 named administrations; no Telegram annotation and no watermark, matching S-013 and S-014",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Units and Rates",
+      "taxonomy_subtopics": [
+        "PR_005"
+      ],
+      "knowledge_nodes": [
+        "N-UNITS"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "verbal",
+      "target_type": "value",
+      "archetype": "A-UNIT-VOLUME-UNIT-COST",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "multiconcept",
+          "load_bearing": true,
+          "counterfactual": "one factor is applied linearly to a single dimension and the other is CUBED for the volume"
+        },
+        {
+          "id": "hidden_step",
+          "load_bearing": true,
+          "counterfactual": "the height is stated in inches while the base is in feet, so a conversion precedes the volume"
+        }
+      ],
+      "distractor_logic": [],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "student_produced_response",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "rectangular_prism",
+          "cost"
+        ],
+        "relations": [
+          "volume = width * length * height",
+          "cubic_factor = linear_factor^3",
+          "unit_cost = cost / volume"
+        ],
+        "given_roles": [
+          "length",
+          "length",
+          "length",
+          "value",
+          "factor",
+          "factor"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "two_factors_at_two_different_powers",
+          "mixed_units_in_the_dimensions"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 4,
+      "observed_notes": "section heading: Unit Conversion; agrees with the printed key",
+      "structural_fingerprint": "801c7d91ba2ae045",
+      "mathematical_fingerprint": "6121a4c6602e1e90",
+      "fingerprint_components": [
+        "ans:student_produced_response",
+        "ask:value",
+        "con:mixed_units_in_the_dimensions",
+        "con:two_factors_at_two_different_powers",
+        "giv:factor",
+        "giv:length",
+        "giv:value",
+        "mech:hidden_step",
+        "mech:multiconcept",
+        "obj:cost",
+        "obj:rectangular_prism",
+        "rel:cubic_factor = linear_factor^#",
+        "rel:unit_cost = cost / volume",
+        "rel:volume = width * length * height",
+        "rep:verbal",
+        "stim:none",
+        "tgt:value"
+      ],
+      "duplicate_group": "DG-0115"
+    },
+    {
+      "question_id": "Q-015-p3-q13",
+      "source_id": "S-015",
+      "source_file": "177ca08e-Units_24.pdf",
+      "source_page": 3,
+      "source_question_number": "13",
+      "source_block": "A",
+      "source_label": "Unit Conversion",
+      "source_administration": "August US 2024",
+      "observed_topic": "unit_conversion",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "25 administration tags over 17 named administrations; no Telegram annotation and no watermark, matching S-013 and S-014",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Units and Rates",
+      "taxonomy_subtopics": [
+        "PR_005"
+      ],
+      "knowledge_nodes": [
+        "N-UNITS"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "verbal",
+      "target_type": "value",
+      "archetype": "A-UNIT-ACCEL",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "multiconcept",
+          "load_bearing": true,
+          "counterfactual": "the time factor is SQUARED and multiplies while the distance factor divides, so the two pull in opposite directions"
+        },
+        {
+          "id": "trap_cost",
+          "load_bearing": true,
+          "counterfactual": "one option is zero, which is what inverting the squared time factor produces"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "reversal_error",
+          "wrong_route": "the squared time factor divided rather than multiplied, giving zero to one decimal"
+        },
+        {
+          "category": "incomplete_reasoning",
+          "wrong_route": "the time factor applied unsquared"
+        },
+        {
+          "category": "arithmetic_slip",
+          "wrong_route": "the distance factor multiplied rather than divided"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "acceleration"
+        ],
+        "relations": [
+          "converted = rate * time_factor^2 / distance_factor"
+        ],
+        "given_roles": [
+          "value",
+          "factor"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "two_factors_opposite_directions",
+          "one_of_them_squared",
+          "answer_rounded_to_a_tenth"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 3,
+      "observed_notes": "section heading: Unit Conversion; agrees with the printed key",
+      "structural_fingerprint": "00b279680ffa7b93",
+      "mathematical_fingerprint": "33c5d7762c862c7f",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:value",
+        "con:answer_rounded_to_a_tenth",
+        "con:one_of_them_squared",
+        "con:two_factors_opposite_directions",
+        "dis:arithmetic_slip",
+        "dis:incomplete_reasoning",
+        "dis:reversal_error",
+        "giv:factor",
+        "giv:value",
+        "mech:multiconcept",
+        "mech:trap_cost",
+        "obj:acceleration",
+        "rel:converted = rate * time_factor^# / distance_factor",
+        "rep:verbal",
+        "stim:none",
+        "tgt:value"
+      ],
+      "duplicate_group": "DG-0117"
+    },
+    {
+      "question_id": "Q-015-p3-q14",
+      "source_id": "S-015",
+      "source_file": "177ca08e-Units_24.pdf",
+      "source_page": 3,
+      "source_question_number": "14",
+      "source_block": "A",
+      "source_label": "Unit Conversion",
+      "source_administration": "November 2024",
+      "observed_topic": "unit_conversion",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "25 administration tags over 17 named administrations; no Telegram annotation and no watermark, matching S-013 and S-014",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Units and Rates",
+      "taxonomy_subtopics": [
+        "PR_005"
+      ],
+      "knowledge_nodes": [
+        "N-UNITS"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "verbal",
+      "target_type": "value",
+      "archetype": "A-UNIT-ACCEL",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "multiconcept",
+          "load_bearing": true,
+          "counterfactual": "the time factor is SQUARED and multiplies while the distance factor divides, so the two pull in opposite directions"
+        },
+        {
+          "id": "trap_cost",
+          "load_bearing": true,
+          "counterfactual": "one option is zero, which is what inverting the squared time factor produces"
+        }
+      ],
+      "distractor_logic": [],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "student_produced_response",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "acceleration"
+        ],
+        "relations": [
+          "converted = rate * time_factor^2 / distance_factor"
+        ],
+        "given_roles": [
+          "value",
+          "factor"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "two_factors_opposite_directions",
+          "one_of_them_squared",
+          "answer_rounded_to_a_tenth"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 3,
+      "observed_notes": "section heading: Unit Conversion; agrees with the printed key",
+      "structural_fingerprint": "aaed6b3abda4531f",
+      "mathematical_fingerprint": "33c5d7762c862c7f",
+      "fingerprint_components": [
+        "ans:student_produced_response",
+        "ask:value",
+        "con:answer_rounded_to_a_tenth",
+        "con:one_of_them_squared",
+        "con:two_factors_opposite_directions",
+        "giv:factor",
+        "giv:value",
+        "mech:multiconcept",
+        "mech:trap_cost",
+        "obj:acceleration",
+        "rel:converted = rate * time_factor^# / distance_factor",
+        "rep:verbal",
+        "stim:none",
+        "tgt:value"
+      ],
+      "duplicate_group": "DG-0114"
+    },
+    {
+      "question_id": "Q-015-p3-q15",
+      "source_id": "S-015",
+      "source_file": "177ca08e-Units_24.pdf",
+      "source_page": 3,
+      "source_question_number": "15",
+      "source_block": "A",
+      "source_label": "Unit Conversion",
+      "source_administration": "October US 2024",
+      "observed_topic": "unit_conversion",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "25 administration tags over 17 named administrations; no Telegram annotation and no watermark, matching S-013 and S-014",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Units and Rates",
+      "taxonomy_subtopics": [
+        "PR_005"
+      ],
+      "knowledge_nodes": [
+        "N-UNITS"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "verbal",
+      "target_type": "value",
+      "archetype": "A-UNIT-LINEAR",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "trap_cost",
+          "load_bearing": true,
+          "counterfactual": "the quantity divided by the factor is printed, and so is the factor applied at the wrong decimal scale"
+        }
+      ],
+      "distractor_logic": [],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "student_produced_response",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "quantity"
+        ],
+        "relations": [
+          "converted = quantity * factor"
+        ],
+        "given_roles": [
+          "value",
+          "factor"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "single_factor_single_direction"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 1,
+      "observed_notes": "section heading: Unit Conversion; agrees with the printed key",
+      "structural_fingerprint": "f8d5b7657dbeb4f4",
+      "mathematical_fingerprint": "c78f64c42dc3495c",
+      "fingerprint_components": [
+        "ans:student_produced_response",
+        "ask:value",
+        "con:single_factor_single_direction",
+        "giv:factor",
+        "giv:value",
+        "mech:trap_cost",
+        "obj:quantity",
+        "rel:converted = quantity * factor",
+        "rep:verbal",
+        "stim:none",
+        "tgt:value"
+      ],
+      "duplicate_group": "DG-0116"
+    },
+    {
+      "question_id": "Q-015-p4-q16",
+      "source_id": "S-015",
+      "source_file": "177ca08e-Units_24.pdf",
+      "source_page": 4,
+      "source_question_number": "16",
+      "source_block": "A",
+      "source_label": "Unit Conversion",
+      "source_administration": "October US 2024",
+      "observed_topic": "unit_conversion",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "25 administration tags over 17 named administrations; no Telegram annotation and no watermark, matching S-013 and S-014",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Units and Rates",
+      "taxonomy_subtopics": [
+        "PR_005"
+      ],
+      "knowledge_nodes": [
+        "N-UNITS"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "verbal",
+      "target_type": "value",
+      "archetype": "A-UNIT-ACCEL",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "multiconcept",
+          "load_bearing": true,
+          "counterfactual": "the time factor is SQUARED and multiplies while the distance factor divides, so the two pull in opposite directions"
+        },
+        {
+          "id": "trap_cost",
+          "load_bearing": true,
+          "counterfactual": "one option is zero, which is what inverting the squared time factor produces — and the printed key takes it"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "reversal_error",
+          "wrong_route": "the squared time factor divided rather than multiplied, giving zero to one decimal"
+        },
+        {
+          "category": "incomplete_reasoning",
+          "wrong_route": "the time factor applied unsquared"
+        },
+        {
+          "category": "arithmetic_slip",
+          "wrong_route": "the distance factor multiplied rather than divided"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "acceleration"
+        ],
+        "relations": [
+          "converted = rate * time_factor^2 / distance_factor"
+        ],
+        "given_roles": [
+          "value",
+          "factor"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "two_factors_opposite_directions",
+          "one_of_them_squared",
+          "answer_rounded_to_a_tenth"
+        ]
+      },
+      "conflicts": [
+        "SOURCE_CONFLICT"
+      ],
+      "ingested_on": "2026-09-05",
+      "step_count": 3,
+      "observed_notes": "section heading: Unit Conversion; the printed key for this item is wrong; KEY WRONG: answer is 2.5, option B",
+      "structural_fingerprint": "00b279680ffa7b93",
+      "mathematical_fingerprint": "33c5d7762c862c7f",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:value",
+        "con:answer_rounded_to_a_tenth",
+        "con:one_of_them_squared",
+        "con:two_factors_opposite_directions",
+        "dis:arithmetic_slip",
+        "dis:incomplete_reasoning",
+        "dis:reversal_error",
+        "giv:factor",
+        "giv:value",
+        "mech:multiconcept",
+        "mech:trap_cost",
+        "obj:acceleration",
+        "rel:converted = rate * time_factor^# / distance_factor",
+        "rep:verbal",
+        "stim:none",
+        "tgt:value"
+      ],
+      "duplicate_group": "DG-0117"
+    },
+    {
+      "question_id": "Q-015-p4-q17",
+      "source_id": "S-015",
+      "source_file": "177ca08e-Units_24.pdf",
+      "source_page": 4,
+      "source_question_number": "17",
+      "source_block": "A",
+      "source_label": "Unit Conversion",
+      "source_administration": "December US 2024",
+      "observed_topic": "unit_conversion",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "25 administration tags over 17 named administrations; no Telegram annotation and no watermark, matching S-013 and S-014",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Units and Rates",
+      "taxonomy_subtopics": [
+        "PR_005"
+      ],
+      "knowledge_nodes": [
+        "N-UNITS"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "verbal",
+      "target_type": "value",
+      "archetype": "A-UNIT-SQUARED",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "nonobvious_relationship",
+          "load_bearing": true,
+          "counterfactual": "the stem gives the factor for the LENGTH and asks about an area, so the factor must be squared and nothing says so"
+        },
+        {
+          "id": "trap_cost",
+          "load_bearing": true,
+          "counterfactual": "the answer with the factor applied once is printed"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "incomplete_reasoning",
+          "wrong_route": "the linear factor applied once instead of squared"
+        },
+        {
+          "category": "reversal_error",
+          "wrong_route": "the squared factor applied in the wrong direction"
+        },
+        {
+          "category": "arithmetic_slip",
+          "wrong_route": "the time conversion omitted"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "area_rate"
+        ],
+        "relations": [
+          "area_factor = length_factor^2",
+          "converted = quantity / area_factor"
+        ],
+        "given_roles": [
+          "value",
+          "factor"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "linear_factor_given_area_asked"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 3,
+      "observed_notes": "section heading: Unit Conversion; agrees with the printed key",
+      "structural_fingerprint": "eff54181e65ecb31",
+      "mathematical_fingerprint": "5c89200dc7bd9834",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:value",
+        "con:linear_factor_given_area_asked",
+        "dis:arithmetic_slip",
+        "dis:incomplete_reasoning",
+        "dis:reversal_error",
+        "giv:factor",
+        "giv:value",
+        "mech:nonobvious_relationship",
+        "mech:trap_cost",
+        "obj:area_rate",
+        "rel:area_factor = length_factor^#",
+        "rel:converted = quantity / area_factor",
+        "rep:verbal",
+        "stim:none",
+        "tgt:value"
+      ],
+      "duplicate_group": "DG-0112"
+    },
+    {
+      "question_id": "Q-015-p4-q18",
+      "source_id": "S-015",
+      "source_file": "177ca08e-Units_24.pdf",
+      "source_page": 4,
+      "source_question_number": "18",
+      "source_block": "A",
+      "source_label": "Unit Conversion",
+      "source_administration": "December 2024",
+      "observed_topic": "unit_conversion",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "25 administration tags over 17 named administrations; no Telegram annotation and no watermark, matching S-013 and S-014",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Units and Rates",
+      "taxonomy_subtopics": [
+        "PR_005"
+      ],
+      "knowledge_nodes": [
+        "N-UNITS"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "symbolic_algebraic",
+      "target_type": "value",
+      "archetype": "A-UNIT-DOWNSCALE",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "nonobvious_relationship",
+          "load_bearing": true,
+          "counterfactual": "dividing a fraction by an integer multiplies its denominator, so the answer looks barely changed"
+        },
+        {
+          "id": "trap_cost",
+          "load_bearing": true,
+          "counterfactual": "the fraction inverted and the factor applied to the numerator are both printed"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "reversal_error",
+          "wrong_route": "the fraction inverted"
+        },
+        {
+          "category": "arithmetic_slip",
+          "wrong_route": "the factor applied to the numerator"
+        },
+        {
+          "category": "wrong_interpretation",
+          "wrong_route": "the denominator reported alone"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "rate_as_a_fraction"
+        ],
+        "relations": [
+          "converted = rate / factor"
+        ],
+        "given_roles": [
+          "value",
+          "factor"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "quantity_given_as_a_fraction"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 1,
+      "observed_notes": "section heading: Unit Conversion; agrees with the printed key",
+      "structural_fingerprint": "dcd3298251fed94c",
+      "mathematical_fingerprint": "ebe14962ca4cf68c",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:value",
+        "con:quantity_given_as_a_fraction",
+        "dis:arithmetic_slip",
+        "dis:reversal_error",
+        "dis:wrong_interpretation",
+        "giv:factor",
+        "giv:value",
+        "mech:nonobvious_relationship",
+        "mech:trap_cost",
+        "obj:rate_as_a_fraction",
+        "rel:converted = rate / factor",
+        "rep:symbolic_algebraic",
+        "stim:none",
+        "tgt:value"
+      ]
+    },
+    {
+      "question_id": "Q-015-p4-q19",
+      "source_id": "S-015",
+      "source_file": "177ca08e-Units_24.pdf",
+      "source_page": 4,
+      "source_question_number": "19",
+      "source_block": "A",
+      "source_label": "Unit Conversion",
+      "source_administration": "March US 2025",
+      "observed_topic": "unit_conversion",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "25 administration tags over 17 named administrations; no Telegram annotation and no watermark, matching S-013 and S-014",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Probability",
+      "taxonomy_subtopics": [
+        "PR_001"
+      ],
+      "knowledge_nodes": [
+        "N-PROBBAS"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "table",
+      "target_type": "value",
+      "archetype": "A-PROB-CONDITIONAL-PROPORTION",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "nonobvious_relationship",
+          "load_bearing": true,
+          "counterfactual": "the four percentages sum over all ages and the conditional needs them to sum over the adult rows only"
+        },
+        {
+          "id": "trap_cost",
+          "load_bearing": true,
+          "counterfactual": "the unconditional percentage is printed and is what skipping the renormalisation gives"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "incomplete_reasoning",
+          "wrong_route": "the unconditional percentage reported"
+        },
+        {
+          "category": "wrong_equation_setup",
+          "wrong_route": "the wrong subset used as the new whole"
+        },
+        {
+          "category": "arithmetic_slip",
+          "wrong_route": "the renormalisation applied to the wrong numerator"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "table",
+      "mathematical_signature": {
+        "objects": [
+          "proportion_table"
+        ],
+        "relations": [
+          "p(a | b) = p(a) / p(b)"
+        ],
+        "given_roles": [
+          "proportion",
+          "proportion",
+          "proportion",
+          "proportion"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "distribution_given_as_percentages",
+          "renormalisation_required"
+        ]
+      },
+      "conflicts": [
+        "SOURCE_CONFLICT"
+      ],
+      "ingested_on": "2026-09-05",
+      "step_count": 3,
+      "observed_notes": "section heading: Unit Conversion; agrees with the printed key; topic outlier: a conditional-probability item inside a unit-conversion file",
+      "stimulus_id": "ST-015-19",
+      "structural_fingerprint": "3be1792d4f64cf6a",
+      "mathematical_fingerprint": "85464213fc426a57",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:value",
+        "con:distribution_given_as_percentages",
+        "con:renormalisation_required",
+        "dis:arithmetic_slip",
+        "dis:incomplete_reasoning",
+        "dis:wrong_equation_setup",
+        "giv:proportion",
+        "mech:nonobvious_relationship",
+        "mech:trap_cost",
+        "obj:proportion_table",
+        "rel:v1(v2 | v3) = v1(v2) / v1(v3)",
+        "rep:table",
+        "stim:table",
+        "tgt:value"
+      ],
+      "duplicate_group": "DG-0111"
+    },
+    {
+      "question_id": "Q-015-p5-q20",
+      "source_id": "S-015",
+      "source_file": "177ca08e-Units_24.pdf",
+      "source_page": 5,
+      "source_question_number": "20",
+      "source_block": "A",
+      "source_label": "Unit Conversion",
+      "source_administration": "May 2025",
+      "observed_topic": "unit_conversion",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "25 administration tags over 17 named administrations; no Telegram annotation and no watermark, matching S-013 and S-014",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Units and Rates",
+      "taxonomy_subtopics": [
+        "PR_005"
+      ],
+      "knowledge_nodes": [
+        "N-UNITS"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "verbal",
+      "target_type": "value",
+      "archetype": "A-UNIT-LINEAR",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "trap_cost",
+          "load_bearing": true,
+          "counterfactual": "the quantity divided by the factor is printed, and so is the factor applied at the wrong decimal scale"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "reversal_error",
+          "wrong_route": "the quantity divided by the factor"
+        },
+        {
+          "category": "arithmetic_slip",
+          "wrong_route": "the factor applied at the wrong decimal scale"
+        },
+        {
+          "category": "arithmetic_slip",
+          "wrong_route": "the factor applied twice"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "quantity"
+        ],
+        "relations": [
+          "converted = quantity * factor"
+        ],
+        "given_roles": [
+          "value",
+          "factor"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "single_factor_single_direction"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 1,
+      "observed_notes": "section heading: Unit Conversion; agrees with the printed key",
+      "structural_fingerprint": "5b676a01353c666d",
+      "mathematical_fingerprint": "c78f64c42dc3495c",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:value",
+        "con:single_factor_single_direction",
+        "dis:arithmetic_slip",
+        "dis:reversal_error",
+        "giv:factor",
+        "giv:value",
+        "mech:trap_cost",
+        "obj:quantity",
+        "rel:converted = quantity * factor",
+        "rep:verbal",
+        "stim:none",
+        "tgt:value"
+      ],
+      "duplicate_group": "DG-0113"
+    },
+    {
+      "question_id": "Q-015-p5-q21",
+      "source_id": "S-015",
+      "source_file": "177ca08e-Units_24.pdf",
+      "source_page": 5,
+      "source_question_number": "21",
+      "source_block": "A",
+      "source_label": "Unit Conversion",
+      "source_administration": "May 2025",
+      "observed_topic": "unit_conversion",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "25 administration tags over 17 named administrations; no Telegram annotation and no watermark, matching S-013 and S-014",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Units and Rates",
+      "taxonomy_subtopics": [
+        "PR_005"
+      ],
+      "knowledge_nodes": [
+        "N-UNITS"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "verbal",
+      "target_type": "value",
+      "archetype": "A-UNIT-PER-SQUARED",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "reversal",
+          "load_bearing": true,
+          "counterfactual": "the converted unit sits in the DENOMINATOR, so a smaller unit makes the number smaller"
+        },
+        {
+          "id": "trap_cost",
+          "load_bearing": true,
+          "counterfactual": "the four options are the same digits at four consecutive powers of ten"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "reversal_error",
+          "wrong_route": "multiplied by the squared factor instead of divided"
+        },
+        {
+          "category": "incomplete_reasoning",
+          "wrong_route": "the factor applied unsquared"
+        },
+        {
+          "category": "arithmetic_slip",
+          "wrong_route": "the factor applied unsquared in the wrong direction"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "density"
+        ],
+        "relations": [
+          "converted = quantity / factor^2"
+        ],
+        "given_roles": [
+          "value",
+          "factor"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "converted_unit_is_in_the_denominator",
+          "options_differ_only_in_scale"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 2,
+      "observed_notes": "section heading: Unit Conversion; agrees with the printed key",
+      "structural_fingerprint": "f40d898cad5b00a2",
+      "mathematical_fingerprint": "7586fedcc80d4cd1",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:value",
+        "con:converted_unit_is_in_the_denominator",
+        "con:options_differ_only_in_scale",
+        "dis:arithmetic_slip",
+        "dis:incomplete_reasoning",
+        "dis:reversal_error",
+        "giv:factor",
+        "giv:value",
+        "mech:reversal",
+        "mech:trap_cost",
+        "obj:density",
+        "rel:converted = quantity / factor^#",
+        "rep:verbal",
+        "stim:none",
+        "tgt:value"
+      ]
+    },
+    {
+      "question_id": "Q-015-p5-q22",
+      "source_id": "S-015",
+      "source_file": "177ca08e-Units_24.pdf",
+      "source_page": 5,
+      "source_question_number": "22",
+      "source_block": "A",
+      "source_label": "Unit Conversion",
+      "source_administration": "June 2025",
+      "observed_topic": "unit_conversion",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "25 administration tags over 17 named administrations; no Telegram annotation and no watermark, matching S-013 and S-014",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Units and Rates",
+      "taxonomy_subtopics": [
+        "PR_005"
+      ],
+      "knowledge_nodes": [
+        "N-UNITS"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "verbal",
+      "target_type": "value",
+      "archetype": "A-UNIT-MIXED-RATE",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "abstraction",
+          "load_bearing": true,
+          "counterfactual": "the quantity is already an acceleration, and the stem hides that by naming its two time units separately"
+        },
+        {
+          "id": "hidden_step",
+          "load_bearing": true,
+          "counterfactual": "the two time units must be reconciled before the length factor is applied"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "incomplete_reasoning",
+          "wrong_route": "the hour left unconverted"
+        },
+        {
+          "category": "reversal_error",
+          "wrong_route": "the length factor inverted"
+        },
+        {
+          "category": "arithmetic_slip",
+          "wrong_route": "the time factor squared as well"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "acceleration"
+        ],
+        "relations": [
+          "rate = distance / (hour * second)",
+          "converted = rate * length_factor"
+        ],
+        "given_roles": [
+          "value",
+          "factor"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "two_time_units_named_separately"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 3,
+      "observed_notes": "section heading: Unit Conversion; agrees with the printed key",
+      "structural_fingerprint": "875954e7d98813cf",
+      "mathematical_fingerprint": "e00f5147f8ee4448",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:value",
+        "con:two_time_units_named_separately",
+        "dis:arithmetic_slip",
+        "dis:incomplete_reasoning",
+        "dis:reversal_error",
+        "giv:factor",
+        "giv:value",
+        "mech:abstraction",
+        "mech:hidden_step",
+        "obj:acceleration",
+        "rel:converted = rate * length_factor",
+        "rel:rate = distance / (hour * second)",
+        "rep:verbal",
+        "stim:none",
+        "tgt:value"
+      ]
+    },
+    {
+      "question_id": "Q-015-p5-q23",
+      "source_id": "S-015",
+      "source_file": "177ca08e-Units_24.pdf",
+      "source_page": 5,
+      "source_question_number": "23",
+      "source_block": "A",
+      "source_label": "Unit Conversion",
+      "source_administration": "June US 2025",
+      "observed_topic": "unit_conversion",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "25 administration tags over 17 named administrations; no Telegram annotation and no watermark, matching S-013 and S-014",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Units and Rates",
+      "taxonomy_subtopics": [
+        "PR_005"
+      ],
+      "knowledge_nodes": [
+        "N-UNITS"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "verbal",
+      "target_type": "value",
+      "archetype": "A-UNIT-CUBED",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "nonobvious_relationship",
+          "load_bearing": true,
+          "counterfactual": "the first factor is CUBED to reach the intermediate unit and the second is not, because only the first is a length"
+        },
+        {
+          "id": "trap_cost",
+          "load_bearing": true,
+          "counterfactual": "the answer with the cube omitted is printed, and so is the answer off by a power of ten"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "incomplete_reasoning",
+          "wrong_route": "the cube omitted"
+        },
+        {
+          "category": "arithmetic_slip",
+          "wrong_route": "both factors cubed"
+        },
+        {
+          "category": "arithmetic_slip",
+          "wrong_route": "the answer off by a power of ten"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "volume"
+        ],
+        "relations": [
+          "cubic_factor = linear_factor^3",
+          "converted = volume * cubic_factor / second_factor"
+        ],
+        "given_roles": [
+          "value",
+          "factor",
+          "factor"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "only_one_of_two_factors_is_cubed"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 3,
+      "observed_notes": "section heading: Unit Conversion; agrees with the printed key",
+      "structural_fingerprint": "d0754cf1d9ed1dcb",
+      "mathematical_fingerprint": "16874a61a308ff38",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:value",
+        "con:only_one_of_two_factors_is_cubed",
+        "dis:arithmetic_slip",
+        "dis:incomplete_reasoning",
+        "giv:factor",
+        "giv:value",
+        "mech:nonobvious_relationship",
+        "mech:trap_cost",
+        "obj:volume",
+        "rel:converted = volume * cubic_factor / second_factor",
+        "rel:cubic_factor = linear_factor^#",
+        "rep:verbal",
+        "stim:none",
+        "tgt:value"
+      ]
+    },
+    {
+      "question_id": "Q-015-p5-q24",
+      "source_id": "S-015",
+      "source_file": "177ca08e-Units_24.pdf",
+      "source_page": 5,
+      "source_question_number": "24",
+      "source_block": "A",
+      "source_label": "Unit Conversion",
+      "source_administration": "June US 2025",
+      "observed_topic": "unit_conversion",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "25 administration tags over 17 named administrations; no Telegram annotation and no watermark, matching S-013 and S-014",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Units and Rates",
+      "taxonomy_subtopics": [
+        "PR_005"
+      ],
+      "knowledge_nodes": [
+        "N-UNITS"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "verbal",
+      "target_type": "value",
+      "archetype": "A-UNIT-LINEAR",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "trap_cost",
+          "load_bearing": true,
+          "counterfactual": "the quantity divided by the factor is printed, and so is the factor applied at the wrong decimal scale"
+        }
+      ],
+      "distractor_logic": [],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "student_produced_response",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "quantity"
+        ],
+        "relations": [
+          "converted = quantity * factor"
+        ],
+        "given_roles": [
+          "value",
+          "factor"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "single_factor_single_direction"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 1,
+      "observed_notes": "section heading: Unit Conversion; agrees with the printed key",
+      "structural_fingerprint": "f8d5b7657dbeb4f4",
+      "mathematical_fingerprint": "c78f64c42dc3495c",
+      "fingerprint_components": [
+        "ans:student_produced_response",
+        "ask:value",
+        "con:single_factor_single_direction",
+        "giv:factor",
+        "giv:value",
+        "mech:trap_cost",
+        "obj:quantity",
+        "rel:converted = quantity * factor",
+        "rep:verbal",
+        "stim:none",
+        "tgt:value"
+      ],
+      "duplicate_group": "DG-0116"
+    },
+    {
+      "question_id": "Q-015-p5-q25",
+      "source_id": "S-015",
+      "source_file": "177ca08e-Units_24.pdf",
+      "source_page": 5,
+      "source_question_number": "25",
+      "source_block": "A",
+      "source_label": "Unit Conversion",
+      "source_administration": "June US 2025",
+      "observed_topic": "unit_conversion",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "25 administration tags over 17 named administrations; no Telegram annotation and no watermark, matching S-013 and S-014",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Units and Rates",
+      "taxonomy_subtopics": [
+        "PR_005"
+      ],
+      "knowledge_nodes": [
+        "N-UNITS"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "verbal",
+      "target_type": "value",
+      "archetype": "A-UNIT-SQUARED",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "nonobvious_relationship",
+          "load_bearing": true,
+          "counterfactual": "the stem gives the factor for the LENGTH and asks about an area, so the factor must be squared and nothing says so"
+        }
+      ],
+      "distractor_logic": [],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "student_produced_response",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "area"
+        ],
+        "relations": [
+          "area_factor = length_factor^2",
+          "converted = quantity * area_factor"
+        ],
+        "given_roles": [
+          "value",
+          "factor"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "linear_factor_given_area_asked",
+          "answer_rounded_to_a_tenth"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 2,
+      "observed_notes": "section heading: Unit Conversion; agrees with the printed key",
+      "structural_fingerprint": "d4d704e4fa396708",
+      "mathematical_fingerprint": "9de6369de78dd750",
+      "fingerprint_components": [
+        "ans:student_produced_response",
+        "ask:value",
+        "con:answer_rounded_to_a_tenth",
+        "con:linear_factor_given_area_asked",
+        "giv:factor",
+        "giv:value",
+        "mech:nonobvious_relationship",
+        "obj:area",
+        "rel:area_factor = length_factor^#",
+        "rel:converted = quantity * area_factor",
+        "rep:verbal",
+        "stim:none",
         "tgt:value"
       ]
     }

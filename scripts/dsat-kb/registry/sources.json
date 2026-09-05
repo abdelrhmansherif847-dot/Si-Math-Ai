@@ -484,6 +484,43 @@
       "filename_claims": 18,
       "questions_found": 19,
       "file_sha256": "22798a72c97ae635452be7ac46530c42db093891e3580e82c5af914792abc8a9"
+    },
+    {
+      "source_id": "S-015",
+      "source_file": "177ca08e-Units_24.pdf",
+      "sha256": "4603e2537a2d376b05bf5062745a376eae714a3bf91aa394f890a9558e40b37b",
+      "md5": "56a5ca7fe4a96c2d2dc7be626c2eeade",
+      "bytes": 218551,
+      "pages": 6,
+      "title": "Unit Conversion (compiled extract, 25 items with a key)",
+      "declared_topic": null,
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "text_layer": true,
+      "image_only": false,
+      "corpus_dir": "/tmp/claude-0/-home-user-Si-Math-Ai/04b11b7c-9e5a-5d76-8bd0-64a172a5c12c/scratchpad/dsat-corpus/4603e2537a2d",
+      "registered": "2026-09-05",
+      "questions_coded": 25,
+      "source_block": "A",
+      "block_label": "Unit Conversion",
+      "page_from": 1,
+      "page_to": 5,
+      "questions": 25,
+      "answer_key_pages": [
+        6
+      ],
+      "answer_key_covers": "all 25 items; one of its answers is wrong",
+      "provenance_evidence": "25 administration tags over 17 named administrations; no Telegram annotation and no watermark, matching S-013 and S-014",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "provenance_signals": [
+        "administration_tag"
+      ],
+      "same_compiler_as": "LAYOUT matches S-001 and S-006 through S-014. Like S-013 and S-014 it carries NO Telegram annotation and no watermark",
+      "filename_claims": 24,
+      "questions_found": 25,
+      "page_tree_note": "its page tree is entirely inside a compressed object stream; pageCount returned null until inflateAll stopped trimming trailing bytes",
+      "file_sha256": "4603e2537a2d376b05bf5062745a376eae714a3bf91aa394f890a9558e40b37b"
     }
   ]
 }

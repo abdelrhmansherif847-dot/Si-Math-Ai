@@ -353,6 +353,28 @@
       "statement_b": "it holds 19 numbered items with no gaps, and its key covers all 19",
       "why": "the second file in this corpus to undercount by exactly one, after S-012 claimed 66 of 67",
       "resolution": "NONE. All 19 are coded; the claim is recorded on the source row as filename_claims."
+    },
+    {
+      "conflict_id": "SRC-0021",
+      "kind": "SOURCE_CONFLICT",
+      "opened": "2026-09-05",
+      "status": "open",
+      "about": "the printed answer for item 16 of S-015",
+      "statement_a": "the key on page 6 gives A, which is 0",
+      "statement_b": "1.1 metres per second squared is 2.5 miles per minute squared — option B",
+      "why": "four sibling items in the same file use the identical conversion and their keys are all right; only this one is not. Zero is what inverting the squared time factor gives. Checked against a render",
+      "resolution": "NONE. The record keeps the source key and notes that it is wrong."
+    },
+    {
+      "conflict_id": "SRC-0022",
+      "kind": "SOURCE_CONFLICT",
+      "opened": "2026-09-05",
+      "status": "open",
+      "about": "what the S-015 filename counts and names",
+      "statement_a": "the file is named Units_24",
+      "statement_b": "it is headed Unit Conversion, holds 25 items, and one of them is a conditional probability",
+      "why": "the third file here to undercount by exactly one, after S-012 and S-014. Item 19 is the same construction as item 5 of S-014 and groups with it across the two files",
+      "resolution": "NONE. All 25 are coded; item 19 is filed under Probability with the archetype the probability corpus defined, which is how the cross-file duplicate surfaced."
     }
   ]
 }
