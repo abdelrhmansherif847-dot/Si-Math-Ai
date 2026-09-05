@@ -107,9 +107,9 @@ Anything graded low should be treated as a lead, not a fact.
 | 19 | Topic-depth principle *(written sideways)* | `the work for each topic is not the same` |
 | 20 | Teaching notes + procedure | `there is no Hard Question`; a numbered 5-step solving procedure |
 | 21 | Teaching notes | lesson ≠ mastery; `min 80%`; eliminating `2-choices` |
-| 22 | **Test-type taxonomy** | `Tests Types` — the four types ①–④, then detail on ① |
-| 23 | **Test-type detail** | type ② and type ③ |
-| 24 | **Test-type detail + series design** | type ④ `(Real Simulation) Perfect test`; the four-column `5 / 5 / 5 / 5` table |
+| 22 | **Exam-profile taxonomy** | `Tests Types` — the four profiles ①–④, then detail on ① |
+| 23 | **Exam-profile detail** | profile ② and profile ③ |
+| 24 | **Exam-profile detail** | profile ④ `(Real Simulation) Perfect test`; the four-column `5 / 5 / 5 / 5` table |
 
 Content class totals: item-topic logs **7** (pp. 3–9), test-type taxonomy **3**
 (pp. 22–24), topic lists/maps **3** (pp. 1, 2, 10), teaching notes **11**
@@ -331,8 +331,8 @@ inside the test-type taxonomy**, where two types are *defined* by their ordering
 - Type ④ (p. 24): `Normal arrange`, with `Easy end fast`
 
 - `SK-ORDER-01` — General question-ordering rule. — **NOT SPECIFIED**
-- `SK-ORDER-02` — A test in which the **first questions are hard and later ones get easier** is one recognised type (type ③). — **SOURCE-STATED**, as a *type definition*
-- `SK-ORDER-03` — `Normal arrange` is a named property of type ④ and is left **undefined**. It is the document's implicit baseline ordering, never described. — **UNKNOWN**
+- `SK-ORDER-02` — A test in which the **first questions are hard and later ones get easier** is one recognised profile (`EP-3`). — **SOURCE-STATED**, as a *profile definition*
+- `SK-ORDER-03` — `Normal arrange` is a named property of `EP-4` and is left **undefined**. It is the document's implicit baseline ordering, never described. — **UNKNOWN**
 
 `SK-ORDER-03` is a genuine hole. The taxonomy's anchor type is defined partly by
 having "normal" ordering, and "normal" is never said.
@@ -356,107 +356,195 @@ This is the author skipping a line, not a numbering rule; it is why §4.2 counts
 
 ---
 
-## 7. The four exam/form strategies
+## 7. Exam profiles / test types
 
-**Located: pages 22–24, headed `Tests Types`.** Four types, numbered ①–④ by the
-author. This is the part of the document the ingestion brief was pointing at.
+**Located: pages 22–24, headed `Tests Types`.**
 
-They are **not four assembly blueprints.** They are four *kinds of practice test*,
-distinguished by the experience they produce and the failure mode they train
-against. Each is defined by a stress profile, not by a topic distribution.
+### 7.0 Correction of 2026-09-05, from the source owner
 
-### Type ① — `Tests take more the normal time`
+This section originally read these entries as a **series design — five tests of
+each of four types, twenty in all, difficulty ascending.** That reading is
+**withdrawn.** It was an inference of this ingestion, not a statement of the
+source, and the source owner has ruled it out.
 
-| | |
+The correction, recorded as given:
+
+> The cases in the notebook are NOT five tests of each type. They represent
+> different possible **EXAM PROFILES / TEST TYPES** that a student may
+> encounter. The important dimension is the relationship between test length /
+> step burden / time pressure, question difficulty, trap density, number
+> ugliness / computational burden, and overall pressure — for example a longer
+> test with easier questions, a shorter test with harder questions, and other
+> combinations.
+
+This is authoritative in a way the ingestion is not: it comes from the owner of
+the source, about what the source means. It is recorded here as an attributed,
+dated gloss rather than folded silently into the text, so that a later reader can
+see which claims come from the page and which from this correction.
+
+Three consequences carried through this file:
+
+- The entries are **exam profiles**, identified `EP-1`..`EP-4`, not a schedule.
+- **No 20-exam series rule exists here**, and none may be reconstructed from
+  these numbers. `SK-SERIES-02` is retired to UNKNOWN and `SK-CR-11` with it.
+- The organising idea is the **relationship between five dimensions**, not a
+  ranking. §7.2 tabulates each profile on all five.
+
+### 7.1 What a profile is, and what it is not
+
+A profile describes **what kind of exam a student may receive**. Explicitly, and
+because none of these is supported by the source, a profile is **not**:
+
+| not a… | because |
 |---|---|
-| Defining property | Takes longer than a normal test |
-| Question difficulty | `Qeustion most Easy and medium` |
-| Step count | `Large steps more than normal` |
-| Numbers | `Numbers is complicated` |
-| Demand | `need organize not smart` |
-| Risk | `More risk than Hard Qeustion` |
-| Failure mode | `student here won't do bad cuz of He is not understand, this is cuz of waste alot of time in easy questions` |
-| Author's message | `the easy question can take alot of time from you if you don't focus on time while solving` |
+| assembly blueprint | no profile is given a construction procedure |
+| topic distribution | no profile is given any topic content at all (`SK-TYPE-03`) |
+| fixed question order | only `EP-3` states an order; `EP-4` names `Normal arrange` and never defines it |
+| separate exam form | no profile is tied to a form, a sitting, or a count |
+| difficulty band | the bands are `DB-EASY`/`DB-MID`/`DB-HARD` over *topics* (§9.1) — a different axis |
 
-The claim is sharp and worth stating plainly: **easy questions carry more risk
-than hard ones**, because they consume time invisibly. Difficulty and cost are
-separated.
+### 7.2 The four profiles
 
-### Type ② — `Tests have a Easy, but tricky Qeustion` · `[selly mistakes is high]`
+The source numbers **four** profiles, ①–④ on p. 22, each with an empty box
+beside it. Each is recorded below on the five dimensions of the correction, in
+the notebook's own words. `—` means the source says nothing on that dimension
+for that profile: those cells are **NOT SPECIFIED**, not defaults.
 
-| | |
-|---|---|
-| Defining property | Easy questions carrying traps |
-| Trap mechanism | `because have a clear trap` · `small change in a word of question` |
-| Demand | `need to read well not calculate or solve fast` |
-| Failure mode | `Student solve fast and wrong` |
-| Author's message | `this is the strongest Lesson and better than any explain` |
+#### `EP-1` — `Tests take more the normal time`
 
-The trap is placed in **the wording**, and the defence is reading, not
-computation. The author rates being caught by it as more instructive than any
-explanation.
+| dimension | source wording | class |
+|---|---|---|
+| length / step burden | `Tests take more the normal time` · `Large steps more than normal` | SOURCE-STATED |
+| difficulty | `Qeustion most Easy and medium` | SOURCE-STATED |
+| trap density | — | NOT SPECIFIED |
+| number / computation | `Numbers is complicated` | SOURCE-STATED |
+| time pressure | `the easy question can take alot of time from you if you don't focus on time while solving` | SOURCE-STATED |
+| stated relationship | `More risk than Hard Qeustion` · `need organize not smart` · failure is `waste alot of time in easy questions`, explicitly **not** `He is not understand` | SOURCE-STATED |
 
-### Type ③ — `stressfull Exam → Like in the trail`
+**The relationship is the point.** Easy-to-medium difficulty, long steps and ugly
+numbers together produce *more* risk than hard questions do. Difficulty and cost
+are separated, and the demand is organisation rather than cleverness.
 
-| | |
-|---|---|
-| Defining property | Reproduces real-sitting stress |
-| Ordering | `Qeustions → first to is Hard` … `and after question get easy at last` |
-| Arrangement | arranged `Like graphs / tables` |
-| Trained skill | `student Learn How to don't enhar at the first of test and How to kaml even if el start wa7sh` |
+#### `EP-2` — `Tests have a Easy, but tricky Qeustion` · `[selly mistakes is high]`
 
-The last line is Arabic-English code-switching: *don't collapse at the start of
-the test, and how to continue even if the start was bad.* The type exists to
-train **recovery**, and it does so through the front-loaded-hard ordering of
-`SK-ORDER-02`.
+| dimension | source wording | class |
+|---|---|---|
+| length / step burden | — | NOT SPECIFIED |
+| difficulty | `Easy` | SOURCE-STATED |
+| trap density | `[selly mistakes is high]` · `because have a clear trap` · `small change in a word of question` | SOURCE-STATED |
+| number / computation | — | NOT SPECIFIED |
+| time pressure | self-inflicted: `Student solve fast and wrong` | SOURCE-STATED |
+| stated relationship | `need to read well not calculate or solve fast`; being caught by it is `the strongest Lesson and better than any explain` | SOURCE-STATED |
 
-### Type ④ — `Perfect Normal test` · `(Real Simulation) Perfect test`
+**The trap sits in the wording, and the defence is reading, not computation.**
+Trap density is this profile's defining dimension; difficulty is deliberately low.
 
-| | |
-|---|---|
-| Defining property | Real simulation |
-| Hard questions | `Hard → clear and not alot` |
-| Medium questions | `medium → need foucs` |
-| Easy questions | `Easy end fast` |
-| Arrangement | `Normal arrange` |
-| Purpose | `student get out of it this is near to his score` |
-| Diagnostic aim | `Let student discover:` `where your time waste` · `where and why you solve this wrong` · `when you need rule and when you need to think well and when you need to skip` |
+#### `EP-3` — `Tests make the student so stressfull while solving` · `Like in the trail`
 
-- `SK-TYPE-01` — There are exactly **four** test types, numbered ①–④. — **SOURCE-STATED**
-- `SK-TYPE-02` — Type ④ alone is described as predicting the real score. — **SOURCE-STATED**
-- `SK-TYPE-03` — The four types differ by **stress and time profile**, not by topic content. No type is given a different topic distribution, question count, or timing. — **SOURCE-STATED** (by exhaustion — no such difference appears anywhere)
-- `SK-TYPE-04` — Construction consequences of each type beyond the properties tabulated above. — **NOT SPECIFIED**
+| dimension | source wording | class |
+|---|---|---|
+| length / step burden | — | NOT SPECIFIED |
+| difficulty | `Qeustions → first to is Hard` … `and after question get easy at last` | SOURCE-STATED |
+| trap density | — | NOT SPECIFIED |
+| number / computation | — | NOT SPECIFIED |
+| time pressure | `Like in the trail` — the pressure of the real sitting | SOURCE-STATED |
+| stated relationship | front-loaded difficulty produces the stress; what it trains is recovery — `student Learn How to don't enhar at the first of test and How to kaml even if el start wa7sh` | SOURCE-STATED |
 
-`SK-TYPE-03` is the load-bearing negative result. The brief asked how topic
-order and distribution change between strategies. **The document does not vary
-them.** What varies is trap density, step length, number ugliness, ordering, and
-time pressure. Anyone building to this taxonomy is building four difficulty and
-trap profiles over a shared content model — not four blueprints.
+Arrangement is noted as `Like graphs / tables`. The Arabic-English clause reads:
+*don't collapse at the start of the test, and continue even if the start was
+bad.* This profile exists to train **recovery**, and the ordering is the
+instrument for it.
 
-### 7.1 The series design on page 24
+#### `EP-4` — `Perfect Normal test` · `(Real Simulation) Perfect test`
 
-Below type ④, four columns, each headed by a circled phrase and each carrying a
+| dimension | source wording | class |
+|---|---|---|
+| length / step burden | `Normal arrange` (never defined — `SK-ORDER-03`) | UNKNOWN |
+| difficulty | `Hard → clear and not alot` · `medium → need foucs` · `Easy end fast` | SOURCE-STATED |
+| trap density | `less in tricky` | SOURCE-STATED |
+| number / computation | — | NOT SPECIFIED |
+| time pressure | normal; `Easy end fast` | SOURCE-STATED |
+| stated relationship | `student get out of it this is near to his score` · `real score predictor` | SOURCE-STATED |
+
+Its diagnostic aim is stated separately: `Let student discover:` `where your time
+waste` · `where and why you solve this wrong` · `when you need rule and when you
+need to think well and when you need to skip`.
+
+**Hard questions are bounded in quantity, not removed** (`clear and not alot`).
+This is the only profile the source connects to a real score.
+
+### 7.3 The dimension matrix
+
+Every profile against every dimension, so the gaps are visible rather than
+implied. `●` stated, `○` named but undefined, `—` not specified.
+
+| dimension | `EP-1` | `EP-2` | `EP-3` | `EP-4` |
+|---|:--:|:--:|:--:|:--:|
+| length / step burden | ● | — | — | ○ |
+| difficulty | ● | ● | ● | ● |
+| trap density | — | ● | — | ● |
+| number / computation | ● | — | — | — |
+| time pressure | ● | ● | ● | ● |
+| *stated relationship* | ● | ● | ● | ● |
+
+The five dimensions are those of the correction, in its order. **Overall
+pressure** is not given a row of its own: the source never states it as a
+property, only as an *outcome* of the other four interacting — so it lives in
+the relationship row, which is where the document actually puts it.
+
+Two readings of this matrix:
+
+- **Difficulty and time pressure are the only dimensions specified for all
+  four profiles.** Every profile is placed on those two axes and on no other
+  two.
+- **Of the 20 dimension cells, 7 are empty**, and number/computational burden
+  is specified for `EP-1` alone. The five-dimension frame is the organising
+  idea; the source does not complete it.
+
+`EP-4`'s length cell is `○` rather than `●` because `Normal arrange` is named
+and never defined (`SK-ORDER-03`) — the taxonomy's anchor profile is partly
+specified by a baseline the document never describes.
+
+### 7.4 The page-24 columns
+
+Below `EP-4`, four columns, each headed by a circled phrase and each carrying a
 large **`5`**. A bracket spans them reading `Hard Level increase well`.
 
-| # | Circled label | Count | Descriptors under it |
-|---|---|---|---|
-| 1 | `Done ✓` (`clean firm reas / new(fast)`) | `5` | `waste time` · `easy tricky` · `not much stress` |
-| 2 | `solve under small stress` | `5` | `stress` · `mor easy they` · `Time is runing` |
-| 3 | `Broke test fair` | `5` | `stress strong` · `hard and time runing` · `arrange` |
-| 4 | `I can Do it` (`avg`) | `5` | `Perfect exams` · `normal arrange` · `less in tricky` · `real score predictor` |
+| # | circled label | descriptors |
+|---|---|---|
+| 1 | `Done ✓` (`clean firm reas` · `well(fast)`) | `waste time` · `easy tricky` · `not much stress` |
+| 2 | `solve under small stress` | `stress` · `mor easy they` · `Time is runing` |
+| 3 | `Broke test fair` | `stress strong` · `hard and time runing` · `arrange` |
+| 4 | `I can Do it` (`avg`) | `Perfect exams` · `normal arrange` · `less in tricky` · `real score predictor` |
 
-- `SK-SERIES-01` — The four columns map onto the four test types: the descriptors of column 4 (`Perfect exams`, `normal arrange`, `real score predictor`) reproduce type ④'s definition almost word for word, and column 3's `stress strong` reproduces type ③'s. — **INFERRED**, high confidence
-- `SK-SERIES-02` — Each column carries `5`, most plausibly **five tests of each type, twenty in total**. — **INFERRED**. The document never labels the `5`s. A rating is possible but implausible: four identical ratings would carry no information.
-- `SK-SERIES-03` — `Hard Level increase well` spans the columns, indicating **difficulty rising across the series**. — **SOURCE-STATED** (the phrase), **INFERRED** (that it orders the four columns)
-- `SK-SERIES-04` — The circled labels are the intended **student reaction** at each stage: `Done ✓` → `solve under small stress` → `Broke test fair` → `I can Do it`. — **INFERRED**
+- `SK-SERIES-01` — the four columns correspond to the four profiles: column 4's descriptors reproduce `EP-4` almost word for word, and column 3's `stress strong` reproduces `EP-3`'s. Column 2's correspondence is the weakest. — **INFERRED**
+- `SK-SERIES-02` — **the meaning of the four `5` entries is UNKNOWN.** They are unlabelled. This ingestion proposed "five tests per profile"; the source owner ruled that out on 2026-09-05 (§7.0), and it must not be reintroduced. No replacement reading is offered, because none is supported. — **UNKNOWN**
+- `SK-SERIES-03` — `Hard Level increase well` spans the columns. — **SOURCE-STATED** (the phrase); what it orders is **INFERRED**
+- `SK-SERIES-04` — the circled labels are the intended student reaction under each profile: `Done ✓` → `solve under small stress` → `Broke test fair` → `I can Do it`. — **INFERRED**
 
-If `SK-SERIES-02` holds, this is a **20-test series specification**: five each of
-four types, difficulty ascending, ending on the type that predicts the real
-score. That is the most directly actionable idea in the document — and it rests
-on an inference about four unlabelled digits. It must be **confirmed with the
-author before any use**, and §14 lists it as the first question to ask.
+### 7.5 Four or five?
 
----
+The correction asks for **five** profiles. **The source shows four**, and this
+was checked rather than assumed:
+
+- **p. 22**, re-read at 2.4×: the heading `Tests Types`, then exactly four
+  bullets, each with an empty box and a circled numeral — ①②③④. No fifth bullet;
+  the page continues directly into the `①` detail.
+- **p. 24**, re-read at 2.6×: exactly four columns, four circled labels, four
+  `5`s. The right edge of the table is clear, with only the `avg` annotation
+  trailing off column 4. No fifth column.
+- No other page carries a profile. §1.3's inventory accounts for all 24.
+
+So a fifth profile is **not in this document.** It may exist in the author's
+model without having been written down, or the count may refer to the `5`
+entries themselves. This ingestion records four and does not invent a fifth —
+adding one would be exactly the fabrication the brief forbids.
+
+- `SK-PROFILE-01` — the source names four profiles. — **SOURCE-STATED**
+- `SK-PROFILE-02` — whether a fifth profile exists outside this document. — **UNKNOWN**
+
+If there is a fifth, naming it is question 1 of §14.2 and the register is shaped
+to take it: `EP-5`, with the same six rows.
 
 ## 8. Question-type architecture
 
@@ -509,7 +597,7 @@ them.
 - `SK-DIFF-03` — Difficulty has (at least) two independent axes here: **topic difficulty** (§9.1) and **test-experience difficulty** (§7). — **INFERRED**
 - `SK-DIFF-04` — Question-level difficulty labels appear sporadically in the logs (`medium` on one item, `Hard` on another, `easy` on a third). No scale is defined and most items carry no label. — **SOURCE-STATED** (the labels), **UNKNOWN** (the scale)
 - `SK-DIFF-05` — Difficulty *distribution* — how many easy/medium/hard per module. — **NOT SPECIFIED**
-- `SK-DIFF-06` — Difficulty *progression within a module*. — **NOT SPECIFIED**, except type ③'s reversed ordering (`SK-ORDER-02`)
+- `SK-DIFF-06` — Difficulty *progression within a module*. — **NOT SPECIFIED**, except `EP-3`'s reversed ordering (`SK-ORDER-02`)
 
 ### 9.4 Score-band effort (p. 17)
 
@@ -542,12 +630,12 @@ nothing is graded HARD RULE.**
 | `SK-CR-03` | A question may combine 2–3 topics | **PATTERN** | Stated p. 10; measured at 19% (§4.3) |
 | `SK-CR-04` | `word problem` and `GRAPHS/TABLES` carry other topics | **PATTERN** | The p. 10 diagram |
 | `SK-CR-05` | Topic mixing concentrates in the harder module | **PATTERN** | Weak: `SK-DIST-02` |
-| `SK-CR-06` | Type ① — long steps, complicated numbers, mostly easy/medium | **PATTERN** | Type definition |
-| `SK-CR-07` | Type ② — traps in wording; `small change in a word` | **PATTERN** | Type definition |
-| `SK-CR-08` | Type ③ — hard first, easing toward the end | **PATTERN** | Type definition |
-| `SK-CR-09` | Type ④ — hard questions `clear and not alot`; `normal arrange` | **PATTERN** | Type definition |
+| `SK-CR-06` | `EP-1` — long steps, complicated numbers, mostly easy/medium, more risk than hard | **PATTERN** | Profile definition |
+| `SK-CR-07` | `EP-2` — traps in wording; `small change in a word` | **PATTERN** | Profile definition |
+| `SK-CR-08` | `EP-3` — hard first, easing toward the end | **PATTERN** | Profile definition |
+| `SK-CR-09` | `EP-4` — hard `clear and not alot`; `less in tricky`; `normal arrange` | **PATTERN** | Profile definition |
 | `SK-CR-10` | Topics sit in three difficulty bands | **PREFERENCE** | Membership ambiguous (`SK-DIFF-02`) |
-| `SK-CR-11` | 5 tests per type, 20 total, difficulty ascending | **UNKNOWN** | Rests on `SK-SERIES-02`, an inference from unlabelled digits |
+| `SK-CR-11` | the meaning of the four `5` entries on p. 24 | **UNKNOWN** | The "five tests per profile" reading is **withdrawn** (§7.0). Unlabelled, and no supported replacement |
 | `SK-CR-12` | Easy questions carry more time-risk than hard ones | **PREFERENCE** | An argued opinion, and a good one, but an opinion |
 | `SK-CR-13` | 58 questions correct for a `pure 800` | **EXAMPLE** | Conflicts with `SK-CR-01`; §12.2 |
 | `SK-CR-14` | Topics differ in required depth — some need rules only, others need rules + skills + strategy + volume (p. 19) | **PREFERENCE** | A study-design claim |
@@ -566,11 +654,11 @@ each would need quantitative definition — how long is `Large steps`, how ugly 
 
 | Class | Count | Meaning |
 |---|---|---|
-| **SOURCE-STATED** | 19 | Written on the page, read at the confidence stated in §1.2 |
-| **INFERRED** | 6 | Derived by this ingestion; the document does not say it |
+| **SOURCE-STATED** | 20 | Written on the page, read at the confidence stated in §1.2 |
+| **INFERRED** | 5 | Derived by this ingestion; the document does not say it |
 | **NOT SPECIFIED** | 11 | The brief asked; the document is silent |
-| **UNKNOWN / AMBIGUOUS** | 4 | The document gestures at it without determining it |
-| | **40** | claims, plus the 16 construction rules of §10 |
+| **UNKNOWN / AMBIGUOUS** | 6 | The document gestures at it without determining it |
+| | **42** | claims, plus the 16 construction rules of §10 |
 
 These counts are not typed by hand. `scripts/validate-exam-knowledge.mjs` derives
 them from the register and fails if this table drifts from it — which it already
@@ -579,20 +667,20 @@ lists below rather than counted, and no reader would have spotted it.
 
 Full register, by class:
 
-**SOURCE-STATED (19)** — `SK-STRUCT-01`, `SK-STRUCT-02`, `SK-STRUCT-03`,
+**SOURCE-STATED (20)** — `SK-STRUCT-01`, `SK-STRUCT-02`, `SK-STRUCT-03`,
 `SK-STRUCT-04`, `SK-TOPIC-01`, `SK-TOPIC-02`, `SK-ORDER-02`, `SK-NUM-01`,
 `SK-NUM-02`, `SK-TYPE-01`, `SK-TYPE-02`, `SK-TYPE-03`, `SK-SERIES-03`,
-`SK-QT-01`, `SK-QT-02`, `SK-QT-03`, `SK-DIFF-01`, `SK-DIFF-07`, `SK-DIFF-08`
+`SK-QT-01`, `SK-QT-02`, `SK-QT-03`, `SK-DIFF-01`, `SK-DIFF-07`, `SK-DIFF-08`, `SK-PROFILE-01`
 
-**INFERRED (6)** — `SK-DIST-02`, `SK-SERIES-01`, `SK-SERIES-02`,
-`SK-SERIES-04`, `SK-QT-05`, `SK-DIFF-03`
+**INFERRED (5)** — `SK-DIST-02`, `SK-SERIES-01`, `SK-SERIES-04`,
+`SK-QT-05`, `SK-DIFF-03`
 
 **NOT SPECIFIED (11)** — `SK-STRUCT-06`, `SK-TIME-01`, `SK-TOPIC-03`,
 `SK-DIST-01`, `SK-ORDER-01`, `SK-NUM-03`, `SK-TYPE-04`, `SK-QT-04`, `SK-QT-06`,
 `SK-DIFF-05`, `SK-DIFF-06`
 
-**UNKNOWN / AMBIGUOUS (4)** — `SK-STRUCT-05`, `SK-ORDER-03`, `SK-DIFF-02`,
-`SK-DIFF-04`
+**UNKNOWN / AMBIGUOUS (6)** — `SK-STRUCT-05`, `SK-ORDER-03`, `SK-DIFF-02`,
+`SK-DIFF-04`, `SK-SERIES-02`, `SK-PROFILE-02`
 
 Construction rules (§10) carry the brief's other scale: **9 PATTERN, 5
 PREFERENCE, 1 EXAMPLE, 1 UNKNOWN, 0 HARD RULE, 0 RANGE.** The two zeros are the
@@ -641,7 +729,9 @@ instrument's hard branch or one sitting's path. Not determinable.
 
 ### 12.4 The four `5`s
 
-`SK-SERIES-02`. Unlabelled. The 20-test reading is plausible and unconfirmed.
+`SK-SERIES-02`. Unlabelled. The "five tests per profile" reading was proposed by
+this ingestion and **withdrawn on 2026-09-05** at the source owner's correction
+(§7.0). No replacement reading is supported, so the entries stay UNKNOWN.
 
 ### 12.5 Brace membership
 
@@ -721,12 +811,16 @@ Carriers are deliberately kept separate from topics. Conflating them would lose
 
 ### 13.3 Test-type identifiers (§7)
 
-| ID | Document name |
-|---|---|
-| `TT-1` | `Tests take more the normal time` |
-| `TT-2` | `Tests have a Easy, but tricky Qeustion` |
-| `TT-3` | `Tests make the student so stressfull while solving` |
-| `TT-4` | `Perfect Normal test` / `(Real Simulation) Perfect test` |
+| ID | Document name | defining dimension |
+|---|---|---|
+| `EP-1` | `Tests take more the normal time` | length / step burden, with complicated numbers |
+| `EP-2` | `Tests have a Easy, but tricky Qeustion` | trap density |
+| `EP-3` | `Tests make the student so stressfull while solving` | pressure, via hard-first ordering |
+| `EP-4` | `Perfect Normal test` / `(Real Simulation) Perfect test` | balance — the score-predicting profile |
+
+`EP-5` is deliberately unallocated. The source shows four (§7.5); if a fifth
+profile exists in the author's model, it takes this identifier and the same six
+dimension rows.
 
 ### 13.4 Difficulty-band identifiers (§9.1)
 
@@ -747,7 +841,7 @@ representation records the break rather than papering over it:
 | Level | Status |
 |---|---|
 | Exam | Partial — `SAT` structurally; `EST` named but never described |
-| Strategy | **Present** — `TT-1`..`TT-4` |
+| Strategy | **Present** as exam profiles — `EP-1`..`EP-4` |
 | Section/Module | Present for SAT — `MOD1`, `MOD2`, 22 each |
 | Question Number | Present — 1..22 per module |
 | Topic | Present as labels — §13.1 |
@@ -785,8 +879,16 @@ option count is inferred from one strategy remark (`SK-QT-05`). Grid-ins,
 multi-question stimuli and figure conventions are absent.
 
 **It does not establish four form-assembly strategies.** It establishes four
-**test types**, which is a different thing — they vary stress, traps, step
-length and ordering over a content model they share (`SK-TYPE-03`).
+**exam profiles**, which is a different thing — they describe what kind of exam a
+student may receive, varying step burden, difficulty, trap density, number
+ugliness and pressure over a content model they share (`SK-TYPE-03`, §7.1). It
+gives no profile a construction procedure, a topic distribution, a question
+count, or a form.
+
+**It does not populate its own dimensions evenly.** Of the 20 dimension cells in
+§7.3, **7 are empty**, and number/computational burden is specified for one
+profile only. The five-dimension frame is the organising idea, not a completed
+table.
 
 **It does not establish a topic hierarchy**, so it cannot supply the
 subtopic level the DNA chain needs.
@@ -800,24 +902,32 @@ beyond type ③'s reversed ordering.
 
 Three things, and they are worth having:
 
-1. **A four-type practice-test taxonomy** with a defined purpose for each, and a
-   named claim that only type ④ predicts a real score. This project has no such
-   taxonomy anywhere in its existing artifacts.
+1. **A four-profile taxonomy of what kind of exam a student may receive**, each
+   with a defining dimension and a named failure mode, and a claim that only
+   `EP-4` predicts a real score. This project has no such taxonomy anywhere in
+   its existing artifacts — its difficulty work has been about items, not about
+   the shape of a whole sitting.
 2. **The carrier/topic distinction** (`SK-TOPIC-01`) and the 2–3-topic composite
    claim (`SK-TOPIC-02`) — arrived at independently, and consistent with what the
    generator already models.
-3. **A possible 20-test series design** (`SK-SERIES-02`) — five per type,
-   difficulty ascending. Unconfirmed, and the single highest-value question to
-   put to the author.
+3. **The relationship claims inside the profiles** — that easy-and-long carries
+   *more* risk than hard (`EP-1`), that a wording trap defeats speed rather than
+   ability (`EP-2`), that front-loaded difficulty trains recovery (`EP-3`). These
+   are causal statements about how a sitting goes wrong, and they are the part of
+   the document with the most content per line.
 
 ### 14.2 Questions for the author, in priority order
 
-1. **Do the four `5`s on p. 24 mean five tests of each type — a 20-test series?**
-2. **Is `58 Q true` the same exam as `22 + 22`?** (§12.2)
-3. **Which topics fall inside the `HarD ParT` and `Mid` braces on p. 1?** (§12.5)
-4. **What do the `✱` / `✗` marks in the item logs mean?** (§12.6)
-5. **Does `Mod 2 (H)` name the adaptive hard branch, or how that sitting felt?** (§12.3)
-6. **Is any of this intended to apply to the EST, or is it all SAT?**
+1. **Is there a fifth exam profile?** The correction of §7.0 asks for five;
+   pp. 22 and 24 show four, re-checked at high magnification (§7.5). If a fifth
+   exists it takes `EP-5` and the six dimension rows.
+2. **What do the four `5` entries on p. 24 mean?** The "five tests per profile"
+   reading is withdrawn; nothing supported has replaced it (`SK-SERIES-02`).
+3. **Is `58 Q true` the same exam as `22 + 22`?** (§12.2)
+4. **Which topics fall inside the `HarD ParT` and `Mid` braces on p. 1?** (§12.5)
+5. **What do the `✱` / `✗` marks in the item logs mean?** (§12.6)
+6. **Does `Mod 2 (H)` name the adaptive hard branch, or how that sitting felt?** (§12.3)
+7. **Is any of this intended to apply to the EST, or is it all SAT?**
 
 ### 14.3 Standing instruction for later documents
 

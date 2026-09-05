@@ -56,41 +56,84 @@ export const PAGE_INVENTORY = [
   { page: 19, cls: 'topic-depth', note: 'written sideways; the work for each topic is not the same' },
   { page: 20, cls: 'teaching', note: 'no Hard Question; 5-step solving procedure' },
   { page: 21, cls: 'teaching', note: 'lesson ≠ mastery; min 80%; eliminate 2-choices' },
-  { page: 22, cls: 'test-types', note: 'Tests Types ①–④; detail on ①' },
-  { page: 23, cls: 'test-types', note: 'type ② and type ③' },
-  { page: 24, cls: 'test-types', note: 'type ④; the 5/5/5/5 series table' },
+  { page: 22, cls: 'exam-profiles', note: 'Tests Types — the four profiles ①–④; detail on ①' },
+  { page: 23, cls: 'exam-profiles', note: 'profile ② and profile ③' },
+  { page: 24, cls: 'exam-profiles', note: 'profile ④; the four-column 5/5/5/5 table' },
 ];
 
-// The four test types (§7). NOT four assembly blueprints — they vary stress,
-// traps, step length and ordering over a content model they share.
-export const TEST_TYPES = [
+// The four EXAM PROFILES (§7) — what kind of exam a student may receive.
+//
+// This replaced an earlier TEST_TYPES export that carried a "five tests of each
+// of four types, twenty in all" series reading. That reading was an inference
+// of the ingestion and the source owner ruled it out on 2026-09-05 (§7.0).
+// It is not to be reintroduced: the validator fails on it.
+//
+// Each profile carries the five dimensions of that correction. A dimension
+// absent from the source is `null`, never a default — the source populates
+// them unevenly and 9 of the 24 cells are empty. `relationship` holds what the
+// source says about how the dimensions interact, which is the part with the
+// most content.
+//
+// A profile is NOT an assembly blueprint, a topic distribution, a fixed
+// question order, a separate form, or a difficulty band (§7.1).
+export const EXAM_PROFILES = [
   {
-    id: 'TT-1', ordinal: 1, name: 'Tests take more the normal time',
+    id: 'EP-1', ordinal: 1, name: 'Tests take more the normal time',
+    lengthStepBurden: 'Tests take more the normal time · Large steps more than normal',
     difficulty: 'Qeustion most Easy and medium',
-    steps: 'Large steps more than normal',
-    numbers: 'Numbers is complicated',
-    demand: 'need organize not smart',
-    risk: 'More risk than Hard Qeustion',
-    failureMode: 'waste alot of time in easy questions',
+    trapDensity: null,
+    numberBurden: 'Numbers is complicated',
+    timePressure: 'the easy question can take alot of time from you if you don\'t focus on time while solving',
+    relationship: 'More risk than Hard Qeustion · need organize not smart · failure is waste alot of time in easy questions, explicitly not He is not understand',
+    cls: 'SOURCE-STATED',
   },
   {
-    id: 'TT-2', ordinal: 2, name: 'Tests have a Easy, but tricky Qeustion',
-    trap: 'small change in a word of question',
-    demand: 'need to read well not calculate or solve fast',
-    failureMode: 'Student solve fast and wrong',
+    id: 'EP-2', ordinal: 2, name: 'Tests have a Easy, but tricky Qeustion',
+    lengthStepBurden: null,
+    difficulty: 'Easy',
+    trapDensity: 'selly mistakes is high · because have a clear trap · small change in a word of question',
+    numberBurden: null,
+    timePressure: 'self-inflicted: Student solve fast and wrong',
+    relationship: 'need to read well not calculate or solve fast; being caught by it is the strongest Lesson and better than any explain',
+    cls: 'SOURCE-STATED',
   },
   {
-    id: 'TT-3', ordinal: 3, name: 'Tests make the student so stressfull while solving',
-    ordering: 'first to is Hard … and after question get easy at last',
-    trains: 'recovery — don\'t collapse at the start, continue even if the start was bad',
+    id: 'EP-3', ordinal: 3, name: 'Tests make the student so stressfull while solving',
+    lengthStepBurden: null,
+    difficulty: 'Qeustions → first to is Hard … and after question get easy at last',
+    trapDensity: null,
+    numberBurden: null,
+    timePressure: 'Like in the trail — the pressure of the real sitting',
+    relationship: 'front-loaded difficulty produces the stress; what it trains is recovery — don\'t enhar at the first of test and How to kaml even if el start wa7sh',
+    cls: 'SOURCE-STATED',
   },
   {
-    id: 'TT-4', ordinal: 4, name: 'Perfect Normal test',
+    id: 'EP-4', ordinal: 4, name: 'Perfect Normal test',
     alsoCalled: '(Real Simulation) Perfect test',
-    hard: 'clear and not alot', medium: 'need foucs', easy: 'end fast',
-    ordering: 'Normal arrange',   // never defined — SK-ORDER-03
-    purpose: 'student get out of it this is near to his score',
+    lengthStepBurden: 'Normal arrange',   // named, never defined — SK-ORDER-03
+    difficulty: 'Hard → clear and not alot · medium → need foucs · Easy end fast',
+    trapDensity: 'less in tricky',
+    numberBurden: null,
+    timePressure: 'normal; Easy end fast',
+    relationship: 'student get out of it this is near to his score · real score predictor',
     scorePredictor: true,
+    cls: 'SOURCE-STATED',
+  },
+];
+
+// The five dimensions named in the correction of 2026-09-05, in its order.
+export const PROFILE_DIMENSIONS = [
+  'lengthStepBurden', 'difficulty', 'trapDensity', 'numberBurden', 'timePressure',
+];
+
+// Withdrawn readings. Kept as data so they cannot be quietly revived: the
+// validator checks that nothing in the artifact reasserts them.
+export const WITHDRAWN = [
+  {
+    id: 'WD-1', withdrawnOn: '2026-09-05', by: 'source owner',
+    reading: 'the four "5" entries on p.24 mean five tests of each of four types, twenty in all, forming a series with difficulty ascending',
+    replacedBy: 'SK-SERIES-02 — UNKNOWN; the entries are unlabelled and no supported reading exists',
+    forbiddenPhrases: ['five tests of each', 'five per type', 'five per profile', '20-test series', '20-exam series', 'twenty-test series'],
   },
 ];
 
@@ -145,19 +188,21 @@ export const CLAIMS = [
   { id: 'SK-DIST-01', cls: 'NOT-SPECIFIED', text: 'stated topic distribution — no %, count, range or quota' },
   { id: 'SK-DIST-02', cls: 'INFERRED', text: 'composite items are commoner in module 2 than module 1' },
   { id: 'SK-ORDER-01', cls: 'NOT-SPECIFIED', text: 'general question-ordering rule' },
-  { id: 'SK-ORDER-02', cls: 'SOURCE-STATED', text: 'type TT-3 runs hard-first, easing to the end' },
-  { id: 'SK-ORDER-03', cls: 'UNKNOWN', text: 'Normal arrange is named as TT-4 baseline and never defined' },
+  { id: 'SK-ORDER-02', cls: 'SOURCE-STATED', text: 'EP-3 runs hard-first, easing to the end' },
+  { id: 'SK-ORDER-03', cls: 'UNKNOWN', text: 'Normal arrange is named as the EP-4 baseline and never defined' },
   { id: 'SK-NUM-01', cls: 'SOURCE-STATED', text: 'numbering is 1..22 within each module, restarting at 1' },
   { id: 'SK-NUM-02', cls: 'SOURCE-STATED', text: 'sequential integers, no gaps, no letter suffixes' },
   { id: 'SK-NUM-03', cls: 'NOT-SPECIFIED', text: 'any question-number to topic relationship' },
-  { id: 'SK-TYPE-01', cls: 'SOURCE-STATED', text: 'there are exactly four test types, numbered ①–④' },
-  { id: 'SK-TYPE-02', cls: 'SOURCE-STATED', text: 'type TT-4 alone is described as predicting the real score' },
-  { id: 'SK-TYPE-03', cls: 'SOURCE-STATED', text: 'the four types differ by stress and time profile, not topic content' },
+  { id: 'SK-TYPE-01', cls: 'SOURCE-STATED', text: 'there are exactly four exam profiles, numbered ①–④' },
+  { id: 'SK-TYPE-02', cls: 'SOURCE-STATED', text: 'EP-4 alone is described as predicting the real score' },
+  { id: 'SK-TYPE-03', cls: 'SOURCE-STATED', text: 'the four profiles differ by stress and time profile, not topic content' },
   { id: 'SK-TYPE-04', cls: 'NOT-SPECIFIED', text: 'construction consequences beyond the tabulated properties' },
-  { id: 'SK-SERIES-01', cls: 'INFERRED', text: 'the four page-24 columns map onto the four test types' },
-  { id: 'SK-SERIES-02', cls: 'INFERRED', text: 'each column\'s 5 means five tests per type, twenty in total' },
+  { id: 'SK-SERIES-01', cls: 'INFERRED', text: 'the four page-24 columns correspond to the four exam profiles' },
+  { id: 'SK-SERIES-02', cls: 'UNKNOWN', text: 'the meaning of the four unlabelled 5 entries on p.24 — the five-tests-per-profile reading is withdrawn (WD-1)' },
   { id: 'SK-SERIES-03', cls: 'SOURCE-STATED', text: 'Hard Level increase well spans the four columns' },
-  { id: 'SK-SERIES-04', cls: 'INFERRED', text: 'the circled labels are the intended student reaction per stage' },
+  { id: 'SK-SERIES-04', cls: 'INFERRED', text: 'the circled labels are the intended student reaction under each profile' },
+  { id: 'SK-PROFILE-01', cls: 'SOURCE-STATED', text: 'the source names four exam profiles, ①–④ on p.22' },
+  { id: 'SK-PROFILE-02', cls: 'UNKNOWN', text: 'whether a fifth profile exists outside this document' },
   { id: 'SK-QT-01', cls: 'SOURCE-STATED', text: 'GRAPHS / TABLES is a top-level carrier' },
   { id: 'SK-QT-02', cls: 'SOURCE-STATED', text: 'word problem is a top-level carrier' },
   { id: 'SK-QT-03', cls: 'SOURCE-STATED', text: 'named stimulus objects: scatter plot, tables, graphs, linear/function graph' },
@@ -226,12 +271,12 @@ export const CONSTRUCTION_RULES = [
   { id: 'SK-CR-03', cls: 'PATTERN', executable: false, text: 'a question may combine 2–3 topics' },
   { id: 'SK-CR-04', cls: 'PATTERN', executable: false, text: 'word problem and GRAPHS/TABLES carry other topics' },
   { id: 'SK-CR-05', cls: 'PATTERN', executable: false, text: 'topic mixing concentrates in the harder module' },
-  { id: 'SK-CR-06', cls: 'PATTERN', executable: false, text: 'TT-1: long steps, complicated numbers, mostly easy/medium' },
-  { id: 'SK-CR-07', cls: 'PATTERN', executable: false, text: 'TT-2: traps in wording; small change in a word' },
-  { id: 'SK-CR-08', cls: 'PATTERN', executable: false, text: 'TT-3: hard first, easing toward the end' },
-  { id: 'SK-CR-09', cls: 'PATTERN', executable: false, text: 'TT-4: hard questions clear and not alot; normal arrange' },
+  { id: 'SK-CR-06', cls: 'PATTERN', executable: false, text: 'EP-1: long steps, complicated numbers, mostly easy/medium' },
+  { id: 'SK-CR-07', cls: 'PATTERN', executable: false, text: 'EP-2: traps in wording; small change in a word' },
+  { id: 'SK-CR-08', cls: 'PATTERN', executable: false, text: 'EP-3: hard first, easing toward the end' },
+  { id: 'SK-CR-09', cls: 'PATTERN', executable: false, text: 'EP-4: hard clear and not alot; less in tricky; normal arrange' },
   { id: 'SK-CR-10', cls: 'PREFERENCE', executable: false, text: 'topics sit in three difficulty bands' },
-  { id: 'SK-CR-11', cls: 'UNKNOWN', executable: false, text: '5 tests per type, 20 total, difficulty ascending' },
+  { id: 'SK-CR-11', cls: 'UNKNOWN', executable: false, text: 'the meaning of the four 5 entries on p.24 (WD-1 withdrawn)' },
   { id: 'SK-CR-12', cls: 'PREFERENCE', executable: false, text: 'easy questions carry more time-risk than hard ones' },
   { id: 'SK-CR-13', cls: 'EXAMPLE', executable: false, text: '58 questions correct for a pure 800' },
   { id: 'SK-CR-14', cls: 'PREFERENCE', executable: false, text: 'topics differ in required depth' },

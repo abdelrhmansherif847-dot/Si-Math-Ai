@@ -21,7 +21,8 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import {
-  SOURCE, PAGE_INVENTORY, TEST_TYPES, DIFFICULTY_BANDS, CARRIERS, TOPICS,
+  SOURCE, PAGE_INVENTORY, EXAM_PROFILES, PROFILE_DIMENSIONS, WITHDRAWN,
+  DIFFICULTY_BANDS, CARRIERS, TOPICS,
   CLAIMS, CONFLICTS, ITEM_LOG_AGGREGATE, FORM_DNA, CONSTRUCTION_RULES, RULE_CLASSES,
 } from '../docs/knowledge/exam-knowledge/exam-knowledge-01.mjs';
 
@@ -56,7 +57,7 @@ check(seen.size === SOURCE.pages,
 for (let i = 1; i <= SOURCE.pages; i++) check(seen.has(i), `page ${i} is missing from the inventory`);
 
 // ── identifiers unique across every register ──
-const ids = [...CLAIMS, ...CONSTRUCTION_RULES, ...TEST_TYPES, ...DIFFICULTY_BANDS, ...CARRIERS, ...TOPICS, ...CONFLICTS]
+const ids = [...CLAIMS, ...CONSTRUCTION_RULES, ...EXAM_PROFILES, ...DIFFICULTY_BANDS, ...CARRIERS, ...TOPICS, ...CONFLICTS]
   .map(x => x.id);
 const dupes = ids.filter((id, i) => ids.indexOf(id) !== i);
 check(dupes.length === 0, `duplicate identifiers: ${[...new Set(dupes)].join(', ')}`);
@@ -83,11 +84,65 @@ const inData = new Set([...CLAIMS, ...CONSTRUCTION_RULES].map(x => x.id));
 for (const id of inData) check(inDoc.has(id), `${id} is registered but never discussed in the artifact`);
 for (const id of inDoc) check(inData.has(id), `${id} is discussed in the artifact but carries no evidence class`);
 
-// ── the four types ──
-check(TEST_TYPES.length === 4, `${TEST_TYPES.length} test types recorded, the source names four`);
-check(TEST_TYPES.map(t => t.ordinal).join() === '1,2,3,4', 'test-type ordinals are not 1..4');
-check(TEST_TYPES.filter(t => t.scorePredictor).length === 1,
-  'exactly one type is described as predicting the real score (SK-TYPE-02)');
+// ── the four profiles, on the five dimensions of the 2026-09-05 correction ──
+check(EXAM_PROFILES.length === 4,
+  `${EXAM_PROFILES.length} profiles recorded; the source shows four (§7.5). ` +
+  'A fifth may be added only when the source supports it — never inferred');
+check(EXAM_PROFILES.map(p => p.ordinal).join() === '1,2,3,4', 'profile ordinals are not 1..4');
+check(EXAM_PROFILES.every(p => /^EP-[1-9]$/.test(p.id)), 'a profile id is not of the form EP-n');
+check(EXAM_PROFILES.filter(p => p.scorePredictor).length === 1,
+  'exactly one profile is described as predicting the real score (SK-TYPE-02)');
+for (const p of EXAM_PROFILES) {
+  for (const d of PROFILE_DIMENSIONS) {
+    check(d in p, `${p.id} has no ${d} field — an unstated dimension must be null, not missing`);
+    check(p[d] === null || (typeof p[d] === 'string' && p[d].length > 2),
+      `${p.id}.${d} is neither null nor source wording`);
+  }
+  check(p.relationship, `${p.id} records no stated relationship between its dimensions`);
+  check(p.cls, `${p.id} carries no evidence class`);
+}
+// The matrix in §7.3 is a count, so it can drift from the data. Pin it.
+const cells = EXAM_PROFILES.flatMap(p => PROFILE_DIMENSIONS.map(d => p[d]));
+const empty = cells.filter(c => c === null).length;
+check(md.includes(`Of the ${cells.length} dimension cells, ${empty} are empty`),
+  `§7.3 does not record ${empty} empty cells of ${cells.length}; the register holds that`);
+check(md.includes(`Of the ${cells.length} dimension cells in`),
+  `§14 does not record ${cells.length} dimension cells`);
+check(empty > 0, 'no dimension is unstated, which would mean the source completed its own frame — it did not');
+
+// ── withdrawn readings must not come back ──
+// A correction that only edits prose gets re-derived by the next reader. These
+// are the phrases the ingestion used before the source owner ruled the reading
+// out. Each occurrence must sit INSIDE a withdrawal — checked locally, in the
+// 300 characters around it, not by asking whether the document mentions a
+// withdrawal somewhere. A global test passes a document that withdraws the
+// reading in one section and reasserts it in another, which is exactly the
+// failure this is for.
+const WITHDRAWAL_MARKER = /withdraw|ruled (it|that) out|must not be reintroduced|is not|NOT /i;
+for (const w of WITHDRAWN) {
+  check(w.withdrawnOn && w.by && w.reading && w.replacedBy,
+    `${w.id} is not a complete withdrawal record — it needs the reading, who withdrew it, when, and what replaced it`);
+  check(Array.isArray(w.forbiddenPhrases) && w.forbiddenPhrases.length >= 3,
+    `${w.id} lists fewer than three forbidden phrasings; the reading can simply be reworded back`);
+  for (const phrase of w.forbiddenPhrases) {
+    const re = new RegExp(phrase.replace(/[-]/g, '.'), 'gi');
+    let m;
+    while ((m = re.exec(md)) !== null) {
+      const around = md.slice(Math.max(0, m.index - 300), m.index + 300);
+      check(WITHDRAWAL_MARKER.test(around),
+        `${w.id}: the artifact asserts "${phrase}" without a withdrawal marker near it ` +
+        `(character ${m.index}) — the reading is withdrawn (§7.0) and may appear only inside its own withdrawal`);
+    }
+  }
+}
+// The withdrawal itself must still be stated, in the words the artifact uses.
+for (const required of [
+  'That reading is\n**withdrawn.**',
+  'must not be reintroduced',
+  '**No 20-exam series rule exists here**',
+]) check(md.includes(required), `the artifact no longer states: ${required.replace(/\n/g, ' ')}`);
+check(/withdrawn|ruled that out/i.test(md), 'the artifact carries no record that a reading was withdrawn');
+check(md.includes('2026-09-05'), 'the artifact does not date the correction');
 
 // ── conflicts stay recorded ──
 check(CONFLICTS.length >= 2, 'the two recorded conflicts have been dropped (§12.1, §12.2)');
