@@ -6565,7 +6565,10 @@ or during Stage 1, in the way O-1, O-2 and O-4 were decided.
   Whether the note is removed, narrowed to unsupported expressions, or kept for
   a parse failure is not stated. UNSPECIFIED, and it is a shipped contract, so
   it cannot be changed silently.
-- **U-5 · The rendering resolution.** O-2 fixed 201 samples and 4 decimal
+- **U-5 · CLOSED by §16.10.11** (2026-09-05) — the renderer samples at
+  **exactly the Stage 0 constants**: 201 samples, `DP = 4`,
+  `MAX_BRANCHES = 8`, `MIN_POINTS = 2`. The question it answered: **the
+  rendering resolution.** O-2 fixed 201 samples and 4 decimal
   places **for storage** (§16.7.4). Whether the renderer resamples for display,
   and at what density, is a separate question O-2 did not answer. §16.7.11's
   *"introduces no new sampling constant"* binds the **test fixtures**; it does
@@ -6740,14 +6743,197 @@ decision of its own, and Stage 1 changes no database object.
 
 ##### What this does NOT close
 
-- **U-5 stays OPEN and is BLOCKING for implementation.** This rule makes the
-  renderer derive its own branches, so `tests/stimulus-editor.test.mjs:419`
-  (two polylines for `1/x`) becomes density-dependent — under a
-  points-authoritative rule it would not have. U-5 must close before the
-  renderer is written.
+- **U-5 · CLOSED by §16.10.11** (2026-09-05). It was BLOCKING, and the reason
+  given here was **wrong**: this bullet claimed that
+  `tests/stimulus-editor.test.mjs:419` (two polylines for `1/x`) becomes
+  density-dependent. **Measured, it does not** — `1/x` yields 2 branches at
+  every density from 51 to 1601, so that assertion is density-INDEPENDENT.
+  The dependency was real but the example was not: the density-sensitive cases
+  are **`tan(10*x)` / F8**, where the branch count moves 1 → 5 → 8-capped, and
+  the **visibility gate**, which rejects `x^2` in `y=[-0.01,0.01]` below 101
+  samples. The second is what made U-5 genuinely blocking — until the density
+  was fixed, rule 1's *"drawable"* predicate had no value.
 - **U-2 stays OPEN.** Nothing here says where the evaluator lives.
 - **U-3 stays OPEN.** Nothing here says which surfaces Stage 1 reaches or when
   it deploys.
 - **V-1 stays OPEN**, above.
 - **The grammar is consumed, not extended** — "drawable" means exactly what
   §16.7.1-16.7.4 already define, and §16.7 remains locked.
+
+#### 16.10.11 · U-5 CLOSED — the renderer's sampling density (2026-09-05)
+
+Read-only audit, then a decision. No code, no test, no schema, and **the Stage
+0 sampler was not modified**.
+
+##### The rule, LOCKED
+
+> **U-5 (CLOSED).** Stage 1's renderer samples an `expr` at **exactly the
+> Stage 0 constants** — **201 samples, `DP = 4`, `MAX_BRANCHES = 8`,
+> `MIN_POINTS = 2`** — and derives branches by the §16.7.4 rules unchanged.
+> It introduces **no new sampling constant**, and the four values have
+> **exactly one definition in the shipped source**.
+
+| Clause | Label | Basis |
+|---|---|---|
+| the four constants, reused exactly | **[design decision]** | R-1 chosen over R-2/R-3/R-4 below; the roadmap fixes no render density |
+| no new sampling constant | **[roadmap]** | §16.7.11's obligation, already binding |
+| exactly one source definition | **[design decision]** | drift prevention; the repository's `_shared/` single-source pattern is the precedent, not a roadmap statement about Stage 1 |
+
+##### Method, and why it is not vacuous
+
+The constants are module-private, so the measurements below ran the **real
+shipped algorithm at other densities**: `stimulus-editor.js` was loaded into a
+fresh VM context with `var SAMPLES = 201;` rebound and **every other byte
+identical**. The harness refuses to run if the anchor moved or the rebind did
+not apply, and its self-check reproduces **all 7 pinned §16.7.9 fixtures at
+201** — a harness that could not reproduce them would prove nothing about the
+densities it varies.
+
+##### Storage guarantees are not rendering guarantees
+
+`stimulus-editor.js:38-41`, read against `sample()` at `:219-252`:
+
+| constant | what it guarantees for STORAGE | what it implies for RENDERING |
+|---|---|---|
+| `SAMPLES = 201` | how many candidate points exist to store | **nothing** — a stored polyline can be re-derived at any N |
+| `DP = 4` | §16.7.10 rule 4's *"rounded once to 4 decimal places"* — a **stored-value** precision | **nothing**; a render path need not round at all |
+| `MAX_BRANCHES = 8` | at most 8 curves per function in the spec | a cap on drawn polylines **only if** the renderer re-derives them |
+| `MIN_POINTS = 2` | `exam_stimulus_spec_ok` requires `points >= 2` — **the database's own floor** | nothing directly; it is a storability rule |
+
+`MIN_POINTS` is the only one with an external anchor. **No roadmap sentence
+tells the renderer what density to use**, which is why U-5 was a real gap and
+not an oversight.
+
+##### The measurements
+
+Branch counts, N = 51 … 1601, pinned fixtures:
+
+| | 51 | 101 | 201 | 401 | 801 | 1601 |
+|---|---|---|---|---|---|---|
+| F1 `x^2-4*x+3` · F2 `2*x+5` · F3 `sin(x)` · F4 `sqrt(x+2)` · F5 `ln(x)` | 1 | 1 | 1 | 1 | 1 | 1 |
+| F6 `1/x` | 2 | 2 | 2 | 2 | 2 | 2 |
+| F7 `tan(x)` on `[-5,5]` | **5** | **5** | **5** | **5** | **5** | **5** |
+| F8 `tan(x)` on `[-20,20]` | **5** | 8 capped | 8 capped | 8 capped | 8 capped | 8 capped |
+
+Twelve adversarial fixtures — poles landing **on** a grid point
+(`1/(x-2.5)`), **between** grid points (`1/(x-2.525)`), `1/(x-0.001)`,
+`1/x^2`, `1/(x^2-1)`, `x^5`, `sqrt(x)`, `ln(x)` and `sin(50*x)` — are all
+**density-stable**. Only two are not:
+
+| fixture | 51 | 101 | 201 | 401 | 801 | 1601 |
+|---|---|---|---|---|---|---|
+| **`tan(10*x)`** | **1** | **5** | 8 capped | 8 capped | 8 capped | 8 capped |
+| **`x^2` in `y=[-0.01,0.01]`** | **REJECTED** | ok | ok | ok | ok | ok |
+
+At N = 51 `tan(10*x)` draws **through** its poles as a single curve, which is
+wrong rather than merely coarse. The second is the **visibility gate**
+(`sampleFunction` rejects when `visible < 2`), and it is why U-5 was blocking:
+until the density is fixed, U-1/U-4's *"drawable"* predicate has no value.
+
+**Count stability is not geometry stability.** Turning points drawn against
+the true function:
+
+| | 51 | 101 | 201 | 401 | 801 |
+|---|---|---|---|---|---|
+| `sin(20*x)` — truth 64 | **36** | 64 | 64 | 64 | 64 |
+| `sin(50*x)` — truth 159 | **40** | **40** | 158 | 158 | 158 |
+
+Nyquist gives the mechanism: `sin(50*x)` gets **0.6 / 1.3 / 2.5** samples per
+period at N = 51 / 101 / 201.
+
+**Going higher costs and gains nothing measured.** SVG bytes for one
+`x^2-4*x+3` curve through the live renderer: **1.52x at 401, 2.53x at 801,
+4.59x at 1601, 8.78x at 3201** — while no fixture gains a branch or a turning
+point. A precision conflict also opens: at a vertex one step changes `y` by
+`dx^2`, so once `dx^2 < 5e-5` consecutive samples share an identical rounded
+`y` and the curve stair-steps. Measured flattening: **0.0% at N <= 801**,
+0.1-0.6% at 1601, up to **1.3% at 3201** — the threshold is exactly N ~ 1601.
+
+##### Candidates rejected
+
+- **R-2 · a separate display density (401 / 801).** Rejected: 1.5-2.5x the
+  bytes for **zero measured shape gain** on any fixture, and it makes the
+  primary and the fallback paths draw **different figures**.
+- **R-3 · adaptive density**, derived from the viewport or the x-range.
+  Rejected: a new policy the roadmap does not authorise, it makes branch count
+  a function of viewport so §16.7.9's fixtures stop being pinnable, and it
+  makes the tests non-deterministic.
+- **R-4 · reuse the constants but skip `DP` rounding on the render path.**
+  Rejected as **measurably a no-op**: flattening is 0.0% at 201, so its only
+  benefit appears at densities R-1 never reaches.
+
+##### Why R-1, stated as evidence
+
+1. **It is the only rule under which the primary and the fallback paths
+   agree.** §16.10.10 rule 2 lets a fallback to stored `points` fire at any
+   time; at any other density the two paths draw different figures, so a parse
+   regression would silently change the drawing.
+2. **Both bounds converge on 201.** Below it, structure is lost — measured:
+   `tan(10*x)` through its poles, F8 down three branches, the visibility gate
+   refusing a fixture it should accept, `sin(20*x)` and `sin(50*x)` under
+   Nyquist. Above it, nothing is gained and bytes grow 1.5-8.8x, with `DP = 4`
+   fighting the density past 801. **201 is the lowest density at which no
+   measured fixture loses structure and the highest at which nothing is
+   wasted.**
+3. §16.7.9's eight fixtures become **renderer invariants for free** — they
+   were derived at these constants.
+4. The literal `201` appears **exactly once** in shipped source
+   (`stimulus-editor.js:38`). Keeping it so is a constraint, not an accident.
+
+##### F7 — which invariant belongs to which layer
+
+| N | runs | discarded | **kept** | sizes |
+|---|---|---|---|---|
+| 51 | 7 | 2 | **5** | `[2,15,15,15,2]` |
+| 201 | 13 | **8** | **5** | `[5,61,61,61,5]` |
+| 1601 | 33 | 28 | **5** | `[43,496,495,496,43]` |
+
+The kept count is **5 at every density**; the discarded count is not. So:
+
+- **"5 branches" is a RENDERER invariant** — density-stable, mathematically
+  right (4 poles → 5 intervals), and what a student sees.
+- **"8 discarded runs" stays a STORAGE-only invariant.** It is an artefact of
+  run-splitting at one N. §16.7.10 already pins it in the editor suite;
+  promoting it to a renderer invariant would pin an implementation detail.
+
+##### The discriminating mutants
+
+| # | Test | Kills |
+|---|---|---|
+| **D-1** | `tan(10*x)` on `[-5,5]` → **8** branches | any density < 201 (51 → 1, 101 → 5) |
+| **D-2** | `x^2` in `y=[-0.01,0.01]` renders rather than being rejected | density <= 51 |
+| **D-3** | `sin(20*x)` draws at least 60 turning points | density <= 51 (36) |
+| **D-4** | **primary ≡ fallback** — the same function rendered from `expr` and from its stored `points` produces the **identical** SVG | *every* density rule except R-1; this is the test that pins the decision |
+| **D-5** | F1-F8 branch counts drawn by the renderer equal §16.7.9's table | any density where F8 ≠ 8 |
+| **D-6** | the sampling constants appear **once** in shipped source | a second hard-coded `201` — the drift hazard |
+| **D-7** | *equivalent guard* — reorder the branch-keeping loop, behaviour identical | **must SURVIVE**, proving the suite pins behaviour and not source text |
+
+##### What U-5 settles for U-1/U-4
+
+It **completes the predicate U-1/U-4 deferred.** *"Not drawable — no drawable
+part in range"* now means: `sampleFunction`, at these constants, returns an
+error — no branches, or `visible < 2`. §16.10.10's rows **3, 5, 6, 7 and 9**
+gain determinate membership, and **M-5b is now assertable with any fixture**,
+not only the unconditional `1/0`.
+
+##### Consequence for U-2 — identified, NOT resolved
+
+R-1 means the renderer needs **exactly** what `sampleFunction` already
+computes, at exactly its constants. Reuse becomes the cheap option and a second
+evaluator now has to justify duplicating four constants and a pinned
+algorithm — but **U-2 stays open**, because at least three shapes satisfy R-1:
+the renderer imports `stimulus-editor.js`; the sampler moves to a shared core
+both import; or a thin wrapper is added. **R-1 is neutral among them and
+chooses no placement.**
+
+Two things U-5 hands U-2. A **constraint**: whichever shape wins, the four
+constants must have one definition, enforced by D-6. And a **tension**,
+recorded rather than blocking: `DP = 4` is a storage precision with no
+rendering purpose, so reusing `sampleFunction` verbatim inherits it — which
+costs **0.0% at 201**, measured. A cleanliness question, not a correctness one.
+
+##### Still open
+
+**U-2** and **U-3** remain OPEN. **V-1** remains OPEN and unfixed. The grammar
+is consumed, not extended. The Stage 0 sampler is **unmodified** — the harness
+rebinds a constant in memory and writes nothing.
