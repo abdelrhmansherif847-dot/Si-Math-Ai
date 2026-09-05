@@ -7273,6 +7273,14 @@ a decision to take.
 schema, no migration, no deploy. It is the specification the next increments are
 measured against, and nothing in it has been built.
 
+**REVISION 1 — 2026-09-05, on review.** Approved with three decisions, each
+applied below and nowhere else: **§17.10.2** is LOCKED (the student shell carries
+no `checkMode()` and no replacement bypass); **W-1** stays OPEN and now also
+forbids any animation or timing change in Increments 1 and 2; **W-5** is CLOSED
+— one unified footer, §17.12.1. Every measurement, quotation and provenance
+label from the original section is unchanged; nothing was re-measured and
+nothing was re-worded to fit.
+
 ### 17.0 · Why this section exists
 
 `assignments.html` is the single student delivery surface for **three** sources
@@ -7378,7 +7386,7 @@ the source — never both.
 | **R2 · Toolbar** | shell frame, capabilities fill the slots | three named slots: `navslot`, `toolslot`, `timeslot` | always; slots may be empty |
 | **R3 · Stage** | **source** | whichever view the source is showing — chooser, sitting, result, review | always |
 | **R4 · Item** | shell | question header, stimulus mount, prompt, response control | during a sitting only |
-| **R5 · Footer** | shell | previous, question palette, next, submit | during a sitting only |
+| **R5 · Footer** | shell — **exactly one**, §17.12.1 | previous, question palette, next, submit, and named slots a source may fill | during a sitting only |
 | **R6 · Overlay** | capability | the tool panel and its scrim; anything modal | on demand |
 | **R7 · Ambient** | capability | audio, ambience, integrity listeners — **no element anywhere** | on demand |
 
@@ -7580,7 +7588,7 @@ The shell **preserves** these; it does not re-implement them. Each is live on
 | Stage 1 figure rendering | `window.StimulusView.render()`, 5 call sites in `assignments.html` | R4 stimulus mount, same entry point, unchanged |
 | RPC delivery, all three sources | the `api` object, §17.6 | moves behind the source adapter, same RPCs |
 | Countdown + auto-submit | `startTimer()`, `.timer/.warn/.crit`, submits at zero | R2 `timeslot`, §17.8 resolves the visual conflict |
-| Prev / next / palette | `#prevBtn`/`#nextBtn`/`#palette`, duplicated for homework | R5, **one** set, source-parameterised |
+| Prev / next / palette | `#prevBtn`/`#nextBtn`/`#palette`, duplicated for homework | R5, **one** footer with named slots — W-5 CLOSED, §17.12.1 |
 | Flag and review | 43 lines mentioning `flag` or `review` | R5 palette states, `Navigator`'s four states |
 | Resume | `exam_req_` / `exam_req_t_` in `localStorage` | `source.resumeKey()`, §17.6 |
 | Homework review screen | `#hwRev`, `.rv-*` | R3, owned by the homework source |
@@ -7623,9 +7631,13 @@ colour, never by motion: a pulsing clock in peripheral vision is exactly the
 pressure the hide exists for."* The same module ships a **hide** control, so its
 position is not an aesthetic preference — it is a design taken twice.
 
-This is **OPEN (W-1)**. It is a student-experience decision, the two shipped
-surfaces disagree, and picking one silently while building a frame is exactly
-the kind of quiet reinterpretation this process exists to prevent.
+This is **OPEN (W-1)**, and it stayed open on review. It is a
+student-experience decision, the two shipped surfaces disagree, and picking one
+silently while building a frame is exactly the kind of quiet reinterpretation
+this process exists to prevent. **Since 2026-09-05 W-1 also carries a
+constraint**: Increments 1 and 2 add no animation and change no live student
+timing behaviour, and `assignments.html`'s existing `.timer.crit` rule is left
+byte-identical rather than adopted or removed (§17.12, obligation 16).
 
 **Tokens, not values.** **[design decision]** Every colour the shell sets comes
 from the existing custom properties the pages already define (`--cyan-3`,
@@ -7733,12 +7745,29 @@ constraint is about **activate, select, or launch**, and a clickable calculator
 control is the first two. It is also a bypass of exactly the gate the same
 constraint says not to bypass.
 
-**THE RULE — [design decision], requires approval before any code.**
+**THE RULE — LOCKED 2026-09-05. [user constraint]**
 
-> **The shell does not carry `checkMode()`.** A student-facing surface computes
-> `available()` from the exam's own policy alone. Internal evaluation, if it is
-> ever needed, is a staff-only affordance decided as its own increment with its
-> own approval — not a query string.
+> **The unified student assessment shell must not expose, carry, or depend on
+> `checkMode()`, `?desmos-check=1`, or any student-reachable override path.** A
+> student-facing surface computes `available()` from the exam's own policy
+> alone. **The existing licence gate is kept as defense-in-depth, and is not
+> replaced by another student-side bypass or workaround.** Internal evaluation,
+> if it is ever needed, is a staff-only affordance decided as its own increment
+> with its own approval — never a query string, a session flag, a
+> `localStorage` key, a hash fragment, or a global someone can set from a
+> console.
+
+Two things this rule is careful to keep apart, because collapsing them is how a
+gate gets removed while everyone believes it was kept:
+
+- **The four gates of §17.10.1 stay.** They are not superseded by this rule and
+  not made redundant by it. Removing the override does not license removing a
+  gate; the gates are the licence boundary and the override was a hole in it.
+- **"No replacement" is a requirement, not an aspiration.** The obvious
+  substitutions — a build-time flag, a `?calc=1`, a role read done in the
+  browser, a `window.SI_CALC_TEST` — are all the same defect wearing different
+  clothes, and §17.13's obligations 4, 12 and 14 exist to make each of them fail
+  a test rather than pass a review.
 
 The alternative — port the launcher verbatim and rely on G2/G3/G4 to make the
 override harmless — is rejected because it makes a licence boundary depend on
@@ -7776,6 +7805,16 @@ tooltip, not a lock icon. Three reasons, and the first is the user's:
 **What a student does still see is the policy badge that exists today**
 **[existing]** — `#qCalc`, *"Calculator allowed"* — because that is a statement
 about the **exam**, not an offer of a tool, and it is already live and correct.
+
+**Reaffirmed on review, 2026-09-05 — [user constraint].** Three prohibitions
+that were quoted in this section's preamble are now approved decisions in their
+own right, and none of them is a default that a later increment may reconsider
+without a new approval: **no trial tier for students**, **no greyed or disabled
+calculator control**, and **no partial or fake calculator implementation**.
+Desmos remains **RESERVED, NON-SELECTABLE and NON-LAUNCHABLE** until a
+commercial licence and its configuration exist. Activation, when it comes, is
+configuration- and licence-driven and requires **no shell architecture
+rewrite** — §17.10.4 is the whole list, and it is four steps with no fifth.
 
 #### 17.10.4 · What activation later requires — and does not
 
@@ -7845,7 +7884,9 @@ All **[existing]**, all inherited, none new:
 
 ### 17.12 · What this section does NOT decide
 
-Five gaps. Each is a real decision, and **none is answered here**.
+**Four gaps remain open.** W-5 was decided on review and is recorded closed in
+§17.12.1. Each of the four below is a real decision, and **none is answered
+here**.
 
 | | Gap | Why it is open | Cost of guessing |
 |---|---|---|---|
@@ -7853,10 +7894,53 @@ Five gaps. Each is a real decision, and **none is answered here**.
 | **W-2** | Is a teacher's paper proctored? | `exam_integrity_events` accepts any attempt id with no FK, so it is cheap — and neither teacher table has a column to record the teacher's choice (§17.9) | Proctoring students because it was easy, without the teacher deciding |
 | **W-3** | What exam-type code does a teacher exam or a homework carry? | There is none, and `exam_code` on `teacher_exams` means something else entirely (§17.6.1) | A share code written into an admin-readable log |
 | **W-4** | Does the shell ship as one page or one module? | `assignments.html` is 1,349 lines with its logic inline; the shell could be a module it loads or a restructure of the page | A 1,300-line rewrite entering as an "increment" |
-| **W-5** | Does R5 keep one footer or two? | `assignments.html` duplicates the whole footer for homework; unifying it is a behaviour change to a live surface | Silently changing homework navigation while building a frame |
 
-**W-1 and W-5 both touch live student behaviour.** Neither can be settled by
-building; both need a decision first.
+**W-1 stays open by decision, not by neglect — [user constraint], 2026-09-05:**
+
+> *"Do not choose or implement a pulsing-clock behaviour yet. Do not add
+> animation or change live student timing behaviour in Increment 1 or
+> Increment 2. Record W-1 as an open decision blocking Increment 3."*
+
+So W-1 now carries a constraint as well as a question. Until it is settled:
+**Increments 1 and 2 add no animation and change no live student timing
+behaviour** — `assignments.html`'s existing `.timer.crit` pulse is left exactly
+as it is, neither adopted into the shell's contract nor removed from the page.
+Leaving a live behaviour untouched is the only move available that does not
+pre-answer the question, and it is deliberately not the same as endorsing it.
+**W-1 blocks Increment 3.**
+
+#### 17.12.1 · W-5 — CLOSED: one unified footer (2026-09-05)
+
+**[user constraint], decided on review:**
+
+> *"The shell owns one footer. Capabilities/sources may contribute information
+> through defined footer slots, but must not create competing/duplicate
+> footers."*
+
+**The rule.** R5 is **one** footer, owned by the shell and built once. A source
+or a capability contributes to it through **named slots** and never by rendering
+a footer of its own. There is no second footer, no per-source footer, and no
+capability that appends one at `document.body` level — R6 is for overlays, and
+an overlay is not a footer.
+
+**What it replaces.** **[measured]** `assignments.html` today carries two
+complete footers — `#footer` and `#hwFooter`, `#palette` and `#hwPalette`, and
+four navigation buttons (`#prevBtn`/`#nextBtn`, `#hwPrevBtn`/`#hwNextBtn`) where
+two would do. Under W-5 that becomes one footer whose contents are
+source-parameterised: the homework source supplies its own submit label and its
+own palette states, and supplies them **into** the shell's footer.
+
+**Why the slot model rather than a source-owned footer.** The alternative
+considered — let each source render whatever footer it likes — is rejected for
+the reason W-5 was open in the first place: two footers built independently
+drift, and the drift shows up as two different answers to *"what does Previous
+do on the last question?"* A slot has a contract; a duplicate has a habit.
+
+**What this decision does NOT authorize.** It is a rule for the shell, not a
+change to a live page. `assignments.html`'s two footers stay exactly as they are
+until the increment that builds R5 — which is **Increment 3**, still blocked on
+W-1. W-5 being closed removes one of Increment 3's two blockers and starts
+nothing.
 
 ### 17.13 · Validation obligations
 
@@ -7894,15 +7978,43 @@ built.
     and `updateStreak`; a teacher sitting and a homework sitting call each of
     them **zero** times. This is the existing proof and it must survive the
     shell.
-12. `?desmos-check=1` on a student surface renders **no** calculator control.
+12. `?desmos-check=1` on a student surface renders **no** calculator control —
+    and neither does any other query string, hash fragment or stored flag. The
+    browser check drives the same substitutions obligation 14 asserts
+    statically, because a static scan proves the code does not *read* a flag
+    and only a run proves the control does not *appear*.
 13. Resume keys stay namespaced across all three sources; a refresh on one never
     resumes another.
 
+**Added on review, 2026-09-05.** Three obligations the three decisions bring
+with them. They are numbered after the original thirteen rather than folded into
+them, so that a reference elsewhere in this section still points where it did.
+
+14. **No student-reachable override path of any kind reaches `available()`**
+    (§17.10.2, LOCKED). Obligation 4 names the one path that exists today; this
+    is the general rule, and it is deliberately written against the *shape*
+    rather than the spelling: `available()` is asserted to derive from the exam
+    policy alone, with no read of `location.search`, `location.hash`,
+    `sessionStorage`, `localStorage`, `document.cookie`, or any settable global.
+    Each is its own mutant, and **a substitution that merely renames
+    `desmos-check` must fail this check even though it passes 4.** Structural.
+15. **Exactly one footer** (W-5, §17.12.1). The shell builds one R5, and no
+    source or capability renders a second. A mutant in which a source appends
+    its own footer — or appends one at `document.body` level — must fail.
+    Structural.
+16. **No animation is introduced and no live student timing behaviour changes**
+    while W-1 is open (§17.12). Increments 1 and 2 add no `animation`,
+    `transition` or `@keyframes` rule to any timing surface, and leave
+    `assignments.html`'s existing `.timer.crit` **byte-identical**. Structural,
+    and the byte-identity half is the part that can actually go red.
+
 **Mutation-tested, not merely green.** Every assertion above must be shown to go
-red under a mutant that breaks it. The two the reviewer should demand first are
-**3** and **12**, because a "no button appears" assertion passes trivially
-against a page that renders nothing at all — a fixture in which the button
-*would* appear if the gate were open is what makes it evidence.
+red under a mutant that breaks it. The three the reviewer should demand first
+are **3**, **12** and **14**, because a "no button appears" assertion passes
+trivially against a page that renders nothing at all — a fixture in which the
+button *would* appear if the gate were open is what makes it evidence — and
+because 14 is the only one of the three that a renamed bypass cannot walk
+past.
 
 ### 17.14 · The increment sequence
 
@@ -7910,16 +8022,24 @@ Approved so far: **Increment 1 only**, and Increment 1 is this section.
 
 | # | Increment | Status | Adds |
 |---|---|---|---|
-| **1** | Shell definition | **this section** — awaiting review | nothing executable |
+| **1** | Shell definition | **APPROVED with three decisions, 2026-09-05** (§17.10.2 LOCKED · W-1 open · W-5 closed) | nothing executable |
 | **2** | Audio / ambience | **not started, not approved** | `exam-audio.js`, `exam-ambience.js`, 7 mp3 assets absent from `main`; no CSP change (`media-src 'self' data: blob:` already covers them) |
-| **3** | Chrome adaptation | not started | `exam-chrome.js` Timer + Navigator into R2/R5 — **blocked on W-1 and W-5** |
+| **3** | Chrome adaptation | not started | `exam-chrome.js` Timer + Navigator into R2/R5 — **blocked on W-1** (W-5 closed, §17.12.1) |
 | **4** | Calculator / Desmos | not started | licence-gated; nothing student-visible until §17.10.4 is done |
 | — | Integrity | not scheduled | **blocked on W-2** |
 
 **[user constraint]** *"Do not begin Increment 2 (audio) until this shell
-definition is reviewed and explicitly approved."*
+definition is reviewed and explicitly approved."* Approval of this section is
+approval of the **definition**, and is not approval of Increment 2.
+
+**Increments 1 and 2 carry W-1's constraint** (§17.12): no animation, and no
+change to live student timing behaviour. Increment 2 satisfies it by
+construction — it lives entirely in R7 and touches no DOM — but the constraint
+is recorded against both increments rather than against the one that could
+plausibly break it, because a rule that only binds where it is inconvenient is
+not a rule.
 
 **A note on order.** Increment 3 is where the shell becomes real, and it is
-blocked on two open decisions, while Increment 2 is unblocked and adds a
-capability in R7 that touches no DOM at all. That is why audio comes first: it
-is the increment that can be built without pre-answering W-1 or W-5.
+still blocked — on W-1 alone now that W-5 is closed. Increment 2 is unblocked
+and adds a capability in R7 that touches no DOM at all. That is why audio comes
+first: it is the increment that can be built without pre-answering W-1.
