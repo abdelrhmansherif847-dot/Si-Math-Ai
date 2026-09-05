@@ -5917,12 +5917,14 @@ other unknown token.
 
 #### 16.7.8 · One item this opens
 
-- **O-4 · Stage 1 and multi-branch functions.** A function that breaks stores
-  the same `expr` on each branch, which is the honest statement — every branch
-  *is* that function on part of its domain. When Stage 1 renders from `expr`
-  directly it must treat consecutive curves sharing an identical `expr` as one
-  function, or it will draw it several times. A Stage 1 design item, recorded
-  now so it is not discovered then.
+- **O-4 · CLOSED by §16.7.11** (2026-09-05) — Stage 1 groups `curves[]` into
+  functions by **adjacency, never globally**, which is the rule Stage 0's
+  `hydratePlot` already ships. A function that breaks stores the same `expr` on
+  each branch, which is the honest statement — every branch *is* that function
+  on part of its domain. When Stage 1 renders from `expr` directly it must
+  treat consecutive curves sharing an identical `expr` as one function, or it
+  will draw it several times. Recorded here before Stage 1 so it was not
+  discovered during it.
 
 ### 16.7.9 · The pinned branch fixtures (clarification 1)
 
@@ -5987,6 +5989,113 @@ The minimum is also the database's: `exam_stimulus_spec_ok` requires
 — it cannot be stored.
 
 The Y-delta split heuristic of §16.7.4 is **unchanged** by this clarification.
+
+### 16.7.11 · O-4 CLOSED — Stage 1 expression-rendering function identity (2026-09-05)
+
+Read-only audit, then a decision. No code was written, no schema proposed, and
+Stage 0 was not touched. The audit's finding is the whole of the answer:
+**Stage 0 already implements this rule**, so Stage 1 does not get to choose one.
+
+#### The rule, LOCKED
+
+> **O-4 (CLOSED).** Stage 1 groups a plot's `curves[]` into functions by
+> **adjacency, never globally**.
+>
+> 1. Walk `curves[]` in **stored order**, tracking the previous curve's `expr`.
+> 2. Consecutive curves with the **same `expr`** are **branches of one
+>    function** — rendered once, as one function, across all its branches.
+> 3. A **different `expr`** ends the current run.
+> 4. A **points curve** (no `expr`) ends the current run **and resets the
+>    tracker**.
+> 5. **Non-consecutive identical expressions are separate functions.**
+>    `1/x, x^2, 1/x` is three functions, not two.
+> 6. A **single `expr` curve is one function** — the general rule at N = 1, not
+>    a special case.
+> 7. **Adjacent duplicate expressions are intentionally normalised as one
+>    function**, because the current model has no grouping key and the two are
+>    visually identical. The collapse is normalisation, not loss.
+
+**The storage law of §16.7.5 is preserved unchanged.** A function curve stores
+**both** `expr` and `points`. Stage 1 renders from `expr`; `points` stay the
+answer for any renderer that does not evaluate one — which is the live one
+today. O-4 adds **no function id, no branch id, no grouping key, no schema
+field and no new visual architecture**.
+
+**The invariant this establishes:** *Stage 1 renderer function identity must
+agree with `hydratePlot` function identity.* Both sides answer "how many
+functions is this?", and they must answer identically or a teacher edits two
+rows and sees three curves.
+
+#### Why adjacency, and why this exact rule
+
+`stimulus-editor.js:474-491` has shipped the rule since Stage 0, and says so
+in its own comment: *"Consecutive curves sharing one expr are BRANCHES OF ONE
+FUNCTION and must fold back into a single row, or the round trip would multiply
+the function by its own branch count."* The audit **executed the shipped
+`hydrate('plot', …)`** rather than reading it — every row below is a measured
+result, re-measured 2026-09-05:
+
+| stored `curves[]` | `inputs.functions` | functions | pointGroups |
+|---|---|---|---|
+| one `x^2` | `["x^2"]` | **1** | 0 |
+| `1/x`, `1/x` | `["1/x"]` | **1** | 0 |
+| `tan(x)` ×5 | `["tan(x)"]` | **1** | 0 |
+| `1/x`, `x^2`, `1/x` | `["1/x","x^2","1/x"]` | **3** | 0 |
+| `1/x`, points, `1/x` | `["1/x","1/x"]` | **2** | 1 |
+| `x^2`, `2*x` | `["x^2","2*x"]` | **2** | 0 |
+| points only | `[]` | **0** | 1 |
+
+Three reasons this rule and no other:
+
+- **Adjacency is the only rule the stored model can express.** `figures[]`
+  carries `mode` (plus `labels` on a points curve) and nothing else — no
+  function id, no branch index. Inventing a grouping key means a schema field,
+  which §16.2's *extend, do not replace* forbids and which the roadmap does not
+  authorise for Stage 1.
+- **Global grouping would change what a teacher already sees.** It would merge
+  `1/x, x^2, 1/x` into two functions and reorder the drawing, for a spec that
+  renders correctly today.
+- **Divergence would split the editor from the renderer.** If Stage 1 grouped
+  differently, `hydratePlot` would have to change with it — a Stage 0 change
+  carrying its own round-trip risk, not something to slip into Stage 1.
+
+One consequence stated plainly rather than left implicit: **the model does not
+distinguish two genuinely separate functions that share an `expr` when they are
+adjacent.** Two such curves sample identically and draw exactly on top of each
+other, so the collapse loses nothing visible — but it is a real limit of the
+model, not an oversight, and rule 7 records it as a decision.
+
+#### The seven test obligations
+
+Stage 1 reuses the **pinned fixtures of §16.7.9** — F6 (`1/x` → 2 branches) and
+F7 (`tan(x)` → 5) — and introduces **no new sampling constant**.
+
+1. **F6 renders one function from two branches; F7 renders one from five.**
+2. **Branch geometry stays separate.** N branches still draw **N polylines**,
+   one per branch. Grouping is about *function identity*, never merging
+   geometry — this is the assertion that stops a naive fix from joining two
+   branches across an asymptote. `tests/stimulus-editor.test.mjs:419` already
+   pins the Stage 0 half of it.
+3. **Non-consecutive identical expressions:** `1/x, x^2, 1/x` → **three**
+   functions, in stored order.
+4. **A points curve resets adjacency:** `1/x`, points curve, `1/x` → **two**
+   functions.
+5. **Consecutive identical expressions collapse:** two adjacent identical
+   `expr` → **one** function.
+6. **A single `expr` curve → one function.**
+7. **The agreement test, and it is the important one.** For every fixture, the
+   renderer's function count **equals**
+   `hydrate('plot', spec).inputs.functions.length`. Both sides are computed
+   from the shipped code, so a future change to either that breaks the
+   correspondence goes red rather than going unnoticed.
+
+**Mutants that must be killed:** global grouping instead of adjacency (killed
+by 3); a points curve that does not reset the run (killed by 4); branches
+merged into a single polyline (killed by 2); the adjacency comparison made
+non-strict (killed by 5 or 7).
+
+O-4 is closed. **Nothing else about Stage 1 is defined by it** — not the
+renderer, not the evaluator, not the Stage 1 goal or exit criteria.
 
 ### 16.8 · Line-by-line contract review (2026-09-04)
 
