@@ -1319,6 +1319,58 @@ body::before{
       </button>
     </section>
 
+    <!-- ASSIGNMENTS — THE PERMANENT DOOR.
+         assignments.html already holds the whole hub: the platform exam list,
+         the homework code box and the teacher-exam code box. Until this card
+         existed the only two links to it in the entire product were inside the
+         teachers card below, which hides itself when a student has no teacher
+         work — so a student without a class had no route to the platform exams
+         at all, and the only exam-shaped thing on their dashboard was Mock
+         Exams, which is a different surface.
+
+         SO THIS CARD IS NEVER CONDITIONAL. No script touches it, no id is read
+         from JavaScript, and it carries no .reveal: that class starts at
+         opacity 0 and waits for an IntersectionObserver bound at load, which
+         is a soft dependency on JS running, and a door must not have one. It
+         does not fade in like its neighbours, and that is the trade.
+
+         An <a>, not a button with location.href like the three CTAs above it:
+         this navigates, so an anchor is the honest element — it is the right
+         role for a screen reader and it still works with scripting off.
+
+         The three lines below name what is behind the door. A card labelled
+         only "Assignments" would not tell a student with no teacher that the
+         platform exams are in there, and that is the exact gap this closes. -->
+    <section class="card span2" id="assignmentsCard">
+      <div class="card-head">
+        <div class="card-ico">📝</div>
+        <div>
+          <div class="card-title">Assignments</div>
+          <div class="card-sub">Platform exams, and work set by your teacher</div>
+        </div>
+      </div>
+
+      <div class="feat-list">
+        <div class="feat">
+          <span class="feat-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h13l3 3v13H4z"/><path d="M8 10h8M8 14h5"/></svg></span>
+          Platform exams
+        </div>
+        <div class="feat">
+          <span class="feat-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16v13H4z"/><path d="M9 4h6v3H9zM9 13h6"/></svg></span>
+          Enter a homework code
+        </div>
+        <div class="feat">
+          <span class="feat-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="9" r="4"/><path d="M2 20a7 7 0 0 1 14 0M17 8h5M19.5 5.5v5"/></svg></span>
+          Enter a teacher exam code
+        </div>
+      </div>
+
+      <a href="assignments.html" class="full-btn">
+        Open assignments
+        <svg viewBox="0 0 16 16" fill="none"><path d="M3 8h10m-4-4 4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </a>
+    </section>
+
     <!-- FROM YOUR TEACHERS
          Hidden unless this student actually has something from a teacher, and
          it stays hidden by default so a failed read leaves the dashboard

@@ -8258,3 +8258,94 @@ the button, so both `indexOf` values were unchanged and it survived — a mutant
 that tested nothing, not a check that missed something. Re-run as a genuine
 swap of the two elements, it was caught. *A surviving mutant is a claim about
 the test only once the mutant is known to bite.*
+
+### 17.17 · A1 — the door to Assignments (2026-09-05)
+
+**The hub was never missing. The way in was.** `assignments.html` already holds
+all three categories a student needs — the platform exam list, the homework code
+box and the teacher-exam code box — and `boot()` already lands on it. What did
+not exist was a route to it.
+
+#### 17.17.1 · The gap, measured before the change
+
+**[measured]** The entire product contained **two** links to `assignments.html`,
+both inside `dashboard.html`'s `#teachSumCard`. That card returns early:
+
+```js
+if (!hw.length && !ex.length) return;   // loadTeacherSummary()
+```
+
+So a student with no homework and no teacher exams had **no route to
+`assignments.html` anywhere** — and therefore no route to the **platform**
+exams it lists. The only exam-shaped link on their dashboard was *Mock Exams*,
+which is `mock-exam.html`, a different surface.
+
+`assignments.html` is also **in no sidebar**: the student sidebar is hand-written
+in each page and names Dashboard, Chat, Weakness Analyzer, Focus Practice, Mock
+Exams, History, Progress, Profile, Devices, Settings, Get Help and Pricing.
+
+#### 17.17.2 · What A1 is
+
+**One static `<section>` in `dashboard.html`, and nothing else.** No JavaScript,
+no CSS, no new class — every class it uses is already on the page. Placed after
+Focus Practice and before `#teachSumCard`: the door first, the status readout
+under it.
+
+Three choices, each deliberate:
+
+- **`<a href>`, not `<button onclick>`.** The three CTAs above it use the button
+  form. This one navigates, so an anchor is the honest element — the right role
+  for assistive tech, and it still works with scripting off, which is what
+  *"never gated"* means at its limit.
+- **No `.reveal`.** That class starts at `opacity:0` and waits for an
+  IntersectionObserver bound at load — a soft JS dependency on a door that must
+  not have one. `#teachSumCard` already omits it for a related reason. **The
+  trade is stated rather than hidden: this card does not fade in like its
+  neighbours.**
+- **The three categories are named on the card.** A door labelled only
+  *Assignments* would not tell a student with no teacher that the platform
+  exams are behind it — which is the exact gap being closed.
+
+**KEEP BOTH DOORS — decided, not drifted into.** `#teachSumCard` keeps its own
+Open link. The new card is the permanent global entry; the teachers card is a
+contextual status shortcut that appears only when there is something to report.
+Whether two doors is right *UX*-wise is a separate question and deliberately not
+answered here.
+
+#### 17.17.3 · What A1 does NOT touch
+
+`assignments.html` · the sitting experience · any RPC, schema, RLS or policy ·
+`nav.js` · `vercel.json` · routing · the sidebar on any page · any frozen page
+(`mock-exam.html`, `weakness.html`, `focus.html`) · **W-1 · W-2 · W-3 · W-4** ·
+R2 / Increment 3 · Desmos and the calculator · audio.
+
+**Still open, and named by the audit that produced A1:** the sidebar is
+hand-written across 17 pages and has **already drifted five ways** with no parity
+gate; three student pages carrying it are frozen; and *Mock Exams* vs
+*Assignments* is an unresolved naming question. Each is its own increment (A2,
+A3), and none is started.
+
+#### 17.17.4 · How it is proved
+
+`tests/assignments-entry.test.mjs`, **26 checks**, new. It asserts the entry is
+**unconditional** from several directions: outside `#teachSumCard`, never
+hidden, no `.reveal`, never named by `loadTeacherSummary()`, referenced by no
+JavaScript at all (the id appears exactly once in the file), one link, one
+destination, and no `onclick` or `<script>` anywhere inside it.
+
+**Ten mutants, ten killed** — card deleted · moved inside `#teachSumCard` ·
+hidden · given a `.reveal` · pointed at `mock-exam.html` · anchor turned into a
+scripted button · gated from `loadTeacherSummary()` · `#teachSumCard`'s Open
+link removed · its full-width button removed · `#teachSumCard` un-hidden.
+
+**Two of them earned their keep by failing first, and both findings are the
+same lesson twice.**
+
+1. The *keep both doors* check compared the **set** of destinations inside
+   `#teachSumCard` and passed against a mutant that deleted one of its two
+   links — because the survivor kept the set identical. It now counts them and
+   pins each by shape. **A set cannot see a duplicate removed.**
+2. The card slice was anchored on the full opening tag, so the `display:none`
+   and `.reveal` mutants died *at the slice* rather than at the checks written
+   to catch them. It now anchors on the id and walks back. **A check only
+   reachable when nothing is wrong is not a check.**
