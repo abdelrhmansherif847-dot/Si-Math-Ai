@@ -33,7 +33,7 @@ const P2 = [[0, 0], [1, 1]];
 // ══ 1 · C-1 · THE STATIC DEPENDENCY CONTRACT ══════════════════════════════
 t.section('Every page that loads the renderer loads the evaluator');
 
-const PAGES = ['exam.html', 'teacher-exams.html', 'teacher-homework.html'];
+const PAGES = ['assignments.html', 'teacher-exams.html', 'teacher-homework.html'];
 const SRC = Object.fromEntries(PAGES.map((p) => [p, read(p)]));
 const loadsView = (s) => /<script src="stimulus-view\.js"><\/script>/.test(s);
 const loadsExpr = (s) => /<script src="stimulus-expr\.js"><\/script>/.test(s);
@@ -46,7 +46,7 @@ for (const p of PAGES)
 /* DETECTOR-FIRES GUARD. A contract that cannot go red is not a contract: strip
    the tag from a copy and the same rule must reject it. */
 t.ok('C-1 · and the check fires when a page drops the tag',
-  !loadsExpr(SRC['exam.html'].replace('<script src="stimulus-expr.js"></script>\n', '')));
+  !loadsExpr(SRC['assignments.html'].replace('<script src="stimulus-expr.js"></script>\n', '')));
 
 /* U-3 · no page is left half-wired: nothing loads the evaluator without the
    renderer either, which would ship 10KB to a page that cannot use it. */

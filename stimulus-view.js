@@ -2,7 +2,7 @@
  *
  * A stimulus is a row of exam_stimuli (platform) or teacher_exam_stimuli
  * (later). This module turns one into HTML. It is the missing half of the exam
- * player: until it existed, exam.html rendered a stimulus's label and body and
+ * player: until it existed, assignments.html rendered a stimulus's label and body and
  * nothing else, so all 25 platform stimuli — every one of which is a `spec` and
  * none of which has a `body` — were invisible to students. 29 of the 66
  * questions in DSAT-2026-A referred to a figure that never appeared.

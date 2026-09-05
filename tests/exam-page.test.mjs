@@ -11,15 +11,15 @@
 // 4 questions". These checks are what stop that behaviour being edited away.
 
 import { suite } from './_assert.mjs';
-import { read } from './_source.mjs';
+import { read, slice, evalSnippet } from './_source.mjs';
 
 const t = suite('exam-page');
-const PAGE = read('exam.html');
+const PAGE = read('assignments.html');
 
 const API = (() => {
   const a = PAGE.indexOf('const api = {');
   const b = PAGE.indexOf('\n};', a);
-  if (a < 0 || b < 0) throw new Error('exam.html: the api object could not be located');
+  if (a < 0 || b < 0) throw new Error('assignments.html: the api object could not be located');
   return PAGE.slice(a, b);
 })();
 
@@ -214,5 +214,202 @@ t.ok('platform exams still come from the unparameterised published read',
   /rpc\('exam_available_sections'\)/.test(PAGE));
 t.is('the page sends no workspace or class argument to any exam RPC',
   [...PAGE.matchAll(/p_workspace|workspace_id:|p_class/g)].map((m) => m[0]), []);
+
+// ══ F-4 · ROOM SOUND ══════════════════════════════════════════════════════
+//
+// The ambience control. Two things have to be true and they are proved
+// differently: the WIRING is read out of the page source, and the RULES are
+// RUN — the preference block is sliced out and executed against fake storage,
+// because "returns false when localStorage throws" is not a claim a regex can
+// make. tests/teacher-class-patterns.test.mjs set that precedent.
+t.section('F-4 — the room-sound control is wired into the bar');
+
+t.ok('the page loads the ambience capability', /<script src="exam-ambience\.js"><\/script>/.test(PAGE));
+t.ok('the control sits before the clock, not after it',
+  PAGE.indexOf('id="ambBtn"') < PAGE.indexOf('id="timer"'));
+t.ok('it starts hidden', /id="ambBtn"[\s\S]{0,120}style="display:none"/.test(PAGE));
+
+// The accessible name is the whole point of not reusing settings.html's
+// .toggle, which ships four unnamed checkboxes.
+const BTN = slice(PAGE, '<button class="ambtn" id="ambBtn"', '</button>', 'ambBtn markup');
+t.ok('it has a real accessible name', /aria-label="Room sound"/.test(BTN));
+t.ok('state is carried by aria-pressed', /aria-pressed="false"/.test(BTN));
+t.ok('the icon is hidden from assistive tech', /aria-hidden="true"/.test(BTN));
+t.ok('it is a button, not a div', /type="button"/.test(BTN));
+t.ok('the click is wired', /\$\('ambBtn'\)\.addEventListener\('click', ambToggle\);/.test(PAGE));
+
+// An icon-sized control, because the 58px bar already carries three things on
+// a phone and this page has no width breakpoint.
+t.ok('the control is icon-sized', /\.ambtn\{[^}]*width:34px;height:34px/.test(PAGE));
+t.ok('it has a visible focus state', /\.ambtn:focus-visible\{outline:/.test(PAGE));
+t.ok('the pressed look is driven by aria-pressed, not a second class',
+  /\.ambtn\[aria-pressed="true"\]\{/.test(PAGE));
+
+t.section('F-4 — the control is isolated from the clock and the footer');
+
+// W-1 stays open: the pulse is untouched and nothing new animates.
+t.ok('the three timer rules are byte-identical',
+  PAGE.includes('.timer{font-family:var(--font-mono);font-size:19px;font-weight:700;color:var(--cyan-3);')
+  && PAGE.includes('.timer.warn{color:#fcd34d;border-color:var(--amber-border);background:var(--amber-soft)}')
+  && PAGE.includes('.timer.crit{color:#fca5a5;border-color:var(--red-border);background:var(--red-soft);animation:pulse 1.6s ease-in-out infinite}'));
+t.ok('the control animates nothing', !/\.ambtn[^{]*\{[^}]*animation/.test(PAGE));
+t.is('there is exactly one pulse animation on the page still',
+  (PAGE.match(/animation:pulse/g) || []).length, 1);
+
+const AMB = slice(PAGE, "const AMB_KEY = 'simath_exam_ambience';", '\nfunction show(which) {', 'ambience block');
+const AMBCODE = AMB.split('\n').filter((l) => !/^\s*(\/\*|\*|\/\/)/.test(l)).join('\n');
+
+// Reading prose is how a check goes green on a comment. These read code.
+for (const forbidden of ['S.tick', 'S.endsAt', 'startTimer', 'timer', 'Footer', 'createElement']) {
+  t.ok(`the block never touches ${forbidden}`, !AMBCODE.includes(forbidden));
+}
+// W-5 stays closed: still exactly the two footers that were there before.
+t.is('no third footer was introduced', (PAGE.match(/id="(hw)?[Ff]ooter"/g) || []).length, 2);
+
+// It must not have grown a bypass, a calculator, or an announcement.
+for (const forbidden of ['desmos', 'checkMode', 'SiExamAudio', 'SiExamRegistry', 'Calculator']) {
+  t.ok(`the block has no ${forbidden}`, !AMB.includes(forbidden));
+}
+
+t.section('F-4 — the rules, RUN against fake storage');
+
+/* A sandbox holding the real sliced block. `store` is the localStorage stand-in
+   — omit it entirely to model a browser where the identifier does not resolve
+   at all, which is a different failure from one that throws. */
+function amb(opts) {
+  opts = opts || {};
+  const calls = [];
+  const btn = { style: { display: 'none' }, attrs: {},
+                setAttribute(k, v) { this.attrs[k] = v; } };
+  const g = {};
+  if (opts.noModule !== true) {
+    g.SiExamAmbience = {
+      enable() { calls.push('enable'); return true; },
+      disable() { calls.push('disable'); return true; },
+      noteModule(k) { calls.push('noteModule:' + k); return true; },
+    };
+  }
+  const env = {
+    window: g,
+    $: (id) => (id === 'ambBtn' ? btn : null),
+    S: { attempt: opts.attempt === undefined ? { attempt_id: 'A1' } : opts.attempt },
+  };
+  if (opts.store !== 'absent') env.localStorage = opts.store || memStore();
+  const api = evalSnippet(AMB, env,
+    ['AMB_KEY', 'ambWanted', 'ambRemember', 'ambApply', 'ambPaint', 'ambToggle', 'ambSync']);
+  return { api, btn, calls, store: env.localStorage };
+}
+function memStore(seed) {
+  const m = new Map(Object.entries(seed || {}));
+  return { getItem: (k) => (m.has(k) ? m.get(k) : null), setItem: (k, v) => m.set(k, String(v)),
+           removeItem: (k) => m.delete(k), _map: m };
+}
+const throwStore = { getItem() { throw new Error('blocked'); },
+                     setItem() { throw new Error('blocked'); },
+                     removeItem() { throw new Error('blocked'); } };
+
+// ── default off ──────────────────────────────────────────────────────────
+{
+  const { api, calls } = amb();
+  t.is('the key is the one settings would later own', api.AMB_KEY, 'simath_exam_ambience');
+  t.ok('a student who never chose hears nothing', api.ambWanted() === false);
+  t.is('and nothing was enabled by loading the block', calls, []);
+}
+
+// ── the value is read strictly ───────────────────────────────────────────
+t.ok("'on' is on", amb({ store: memStore({ simath_exam_ambience: 'on' }) }).api.ambWanted() === true);
+for (const v of ['off', 'ON', 'true', '1', 'yes', '']) {
+  t.ok(`'${v}' is not on`, amb({ store: memStore({ simath_exam_ambience: v }) }).api.ambWanted() === false);
+}
+
+// ── storage that fails ───────────────────────────────────────────────────
+{
+  const { api } = amb({ store: throwStore });
+  t.ok('a throwing read fails closed to OFF', api.ambWanted() === false);
+  let threw = false;
+  try { api.ambRemember(true); } catch (_) { threw = true; }
+  t.ok('a throwing write is swallowed', threw === false);
+  t.ok('and it is still off afterwards', api.ambWanted() === false);
+}
+{
+  const { api } = amb({ store: 'absent' });
+  t.ok('no localStorage at all fails closed to OFF', api.ambWanted() === false);
+  let threw = false;
+  try { api.ambRemember(true); } catch (_) { threw = true; }
+  t.ok('and writing without storage does not throw', threw === false);
+}
+
+// ── persistence round trip ───────────────────────────────────────────────
+{
+  const { api, store } = amb();
+  api.ambRemember(true);
+  t.is('on is written as the exact string', store.getItem('simath_exam_ambience'), 'on');
+  t.ok('and reads back on', api.ambWanted() === true);
+  api.ambRemember(false);
+  t.is('off is written explicitly, not deleted', store.getItem('simath_exam_ambience'), 'off');
+  t.ok('and reads back off', api.ambWanted() === false);
+}
+
+// ── the toggle ───────────────────────────────────────────────────────────
+{
+  const { api, btn, calls, store } = amb();
+  api.ambToggle();
+  t.is('one click enables', calls, ['enable']);
+  t.is('and persists', store.getItem('simath_exam_ambience'), 'on');
+  t.is('and paints the button pressed', btn.attrs['aria-pressed'], 'true');
+  api.ambToggle();
+  t.is('a second click disables', calls, ['enable', 'disable']);
+  t.is('and persists off', store.getItem('simath_exam_ambience'), 'off');
+  t.is('and paints it unpressed', btn.attrs['aria-pressed'], 'false');
+}
+
+t.section('F-4 — visibility: the exam screen and nowhere else');
+
+for (const screen of ['pick', 'hwSit', 'hwRev', 'done', 'loading']) {
+  const { api, btn, calls } = amb({ store: memStore({ simath_exam_ambience: 'on' }) });
+  api.ambSync(screen);
+  t.is(`hidden on ${screen}`, btn.style.display, 'none');
+  t.is(`and silenced on ${screen}`, calls, ['disable']);
+}
+{
+  const { api, btn, calls } = amb({ store: memStore({ simath_exam_ambience: 'on' }) });
+  api.ambSync('sitting');
+  t.is('shown on sitting', btn.style.display, '');
+  t.is('the module is told which sitting it is, then started',
+    calls, ['noteModule:A1', 'enable']);
+  t.is('and the button shows the stored state', btn.attrs['aria-pressed'], 'true');
+}
+{
+  // The whole point of default-off: entering the exam screen having never
+  // chosen must NOT start anything.
+  const { api, btn, calls } = amb();
+  api.ambSync('sitting');
+  t.is('shown on sitting even when off', btn.style.display, '');
+  t.is('but nothing is enabled', calls, ['noteModule:A1']);
+  t.is('and the button reads unpressed', btn.attrs['aria-pressed'], 'false');
+}
+{
+  // A failed submit re-enters sitting. noteModule is idempotent on the key, so
+  // this must not look like a new module to the caller either.
+  const { api, calls } = amb({ store: memStore({ simath_exam_ambience: 'on' }) });
+  api.ambSync('sitting'); api.ambSync('sitting');
+  t.is('re-entering the same sitting passes the same key',
+    calls, ['noteModule:A1', 'enable', 'noteModule:A1', 'enable']);
+}
+{
+  // No capability loaded: no control at all, rather than a dead button.
+  const { api, btn } = amb({ noModule: true, store: memStore({ simath_exam_ambience: 'on' }) });
+  api.ambSync('sitting');
+  t.is('with no module the control is not shown', btn.style.display, 'none');
+  t.ok('and applying does nothing', api.ambApply(true) === false);
+}
+{
+  // An attempt with no id must not throw on the way into the screen.
+  const { api, btn } = amb({ attempt: null, store: memStore({ simath_exam_ambience: 'on' }) });
+  let threw = false;
+  try { api.ambSync('sitting'); } catch (_) { threw = true; }
+  t.ok('a missing attempt does not break the screen switch', threw === false);
+  t.is('and the control still shows', btn.style.display, '');
+}
 
 t.done();

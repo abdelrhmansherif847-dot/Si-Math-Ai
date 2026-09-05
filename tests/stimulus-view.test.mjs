@@ -1,6 +1,6 @@
 // The stimulus renderer — the half of the exam player that was missing.
 //
-// Before stimulus-view.js, exam.html rendered a stimulus's label and body and
+// Before stimulus-view.js, assignments.html rendered a stimulus's label and body and
 // nothing else. Every stimulus in the corpus is a `spec` with no body, so 29 of
 // the 66 questions in DSAT-2026-A referred to a figure that never appeared.
 // These checks are what stop that returning, and what stop the fix becoming a
@@ -159,9 +159,9 @@ t.ok('a multi-series chart carries a legend naming each series',
   /Boys/.test(SV.render(FX.chart_bar)) && /Girls/.test(SV.render(FX.chart_bar)));
 
 // ══ 6 · THE PAGE USES IT ══════════════════════════════════════════════════
-t.section('exam.html renders through the module and not around it');
+t.section('assignments.html renders through the module and not around it');
 
-const PAGE = read('exam.html');
+const PAGE = read('assignments.html');
 t.ok('the module is loaded', /<script src="stimulus-view\.js"><\/script>/.test(PAGE));
 t.ok('the item renderer calls it', /window\.StimulusView\.render\(it\.stimulus\)/.test(PAGE));
 /* The old two-line renderer is what left 29 questions blank. If it comes back,

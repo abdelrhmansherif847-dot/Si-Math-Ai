@@ -9,7 +9,7 @@
 // grid, and a figure was near-invisible.
 //
 // THREE PAGES SERVE IT and all three must be identical:
-//   exam.html              the student player — the canonical copy
+//   assignments.html              the student player — the canonical copy
 //   teacher-homework.html  the staff preview for homework
 //   teacher-exams.html     the staff preview for exams
 // A preview is only a preview if it is styled the way the student's page is.
@@ -29,7 +29,7 @@ import { read } from './_source.mjs';
 const t = suite('renderer-css-parity');
 
 const RENDERER = read('stimulus-view.js');
-const PAGES = ['exam.html', 'teacher-homework.html', 'teacher-exams.html'];
+const PAGES = ['assignments.html', 'teacher-homework.html', 'teacher-exams.html'];
 const SRC = Object.fromEntries(PAGES.map((p) => [p, read(p)]));
 
 /* Comments stripped before anything is derived from source. A class named in
@@ -99,7 +99,7 @@ t.section('The three copies have not drifted');
 /* Normalised: selector + body, sorted, so a reordering or a reflow is not a
    difference but a changed declaration is. */
 const norm = (rules) => rules.map(([s, b]) => s + '{' + b + '}').sort().join('\n');
-const CANON = norm(RULES['exam.html']);
+const CANON = norm(RULES['assignments.html']);
 t.ok('the canonical set is substantial (not vacuous)', CANON.length > 1800);
 /* THE COMPARISONS ARE COUNTED, not assumed. This loop is the ONLY thing that
    detects drift between the three copies — measured: with it disabled, a
@@ -110,7 +110,7 @@ t.ok('the canonical set is substantial (not vacuous)', CANON.length > 1800);
    not, because that expression is still 2 however the loop is edited. */
 let compared = 0;
 for (const p of PAGES.slice(1)) {
-  t.is(`${p} is byte-identical to exam.html after normalisation`, norm(RULES[p]), CANON);
+  t.is(`${p} is byte-identical to assignments.html after normalisation`, norm(RULES[p]), CANON);
   compared++;
 }
 t.is('and both staff pages really were compared', compared, 2);
@@ -182,7 +182,7 @@ t.ok('and the canonical .sv-label',
 // ══ 6 · THE TOKENS THE RULES DEPEND ON ════════════════════════════════════
 t.section('Every page defines the custom properties the block needs');
 
-const NEEDED = [...new Set(RULES['exam.html']
+const NEEDED = [...new Set(RULES['assignments.html']
   .flatMap(([, b]) => [...b.matchAll(/var\((--[a-z0-9-]+)/g)].map((m) => m[1])))].sort();
 t.ok('the block needs custom properties (not vacuous)', NEEDED.length >= 12);
 for (const p of PAGES) {

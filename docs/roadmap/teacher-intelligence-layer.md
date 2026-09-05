@@ -7264,3 +7264,997 @@ not modified, and **Stage 1's scope is not expanded to include it.**
 **Every Stage 1 design decision is now closed**: O-1, O-2, O-4, U-1, U-2, U-3,
 U-4 and U-5. What remains before implementation is approval to write code, not
 a decision to take.
+
+---
+
+## 17 · The Unified Student Assessment Shell — DEFINITION (2026-09-05)
+
+**This section authorizes no code.** No module, no page edit, no stylesheet, no
+schema, no migration, no deploy. It is the specification the next increments are
+measured against, and nothing in it has been built.
+
+**REVISION 1 — 2026-09-05, on review.** Approved with three decisions, each
+applied below and nowhere else: **§17.10.2** is LOCKED (the student shell carries
+no `checkMode()` and no replacement bypass); **W-1** stays OPEN and now also
+forbids any animation or timing change in Increments 1 and 2; **W-5** is CLOSED
+— one unified footer, §17.12.1. Every measurement, quotation and provenance
+label from the original section is unchanged; nothing was re-measured and
+nothing was re-worded to fit.
+
+### 17.0 · Why this section exists
+
+`assignments.html` is the single student delivery surface for **three** sources
+(§17.6), and a full assessment engine — sixteen modules, 269,181 bytes — exists
+on an unmerged branch and serves none of them. The two were built eighteen
+months and one architecture apart, and the question "which student test
+experience is the real one?" currently has two answers. This section makes it
+one.
+
+**Provenance, marked throughout.** Every clause carries one of five labels, so a
+later reader can tell a measurement from a decision from a gap:
+
+- **[measured]** — read today from the live database, the working tree, or the
+  old branch through `git show`. The command that produced it is named or the
+  number is exact.
+- **[existing]** — already true of a shipped surface: `assignments.html` at
+  `main`, or the old engine on `origin/claude/mock-exam-enhancement-nnwb48`.
+  Stated, not created.
+- **[design decision]** — a choice this section takes that the repository does
+  not determine. It **adds a requirement**, and the alternative it rejected is
+  recorded beside it.
+- **[user constraint]** — imposed in the approval for this increment, quoted.
+  Not negotiable by a later reading.
+- **OPEN** — a genuine gap. §17.12 lists them. **None is filled by guessing**,
+  and the shell is not complete while one is being answered implicitly by code
+  rather than explicitly by a decision.
+
+### 17.1 · What was measured, and how
+
+Every number below was read on 2026-09-05 against the live project, `main`, or
+the old branch. None is recalled.
+
+| Fact | Value | How |
+|---|---|---|
+| `assignments.html` | 1,349 lines | `wc -l` |
+| Old-engine modules | 16 JS files, **269,181 B**, plus `exam-surface.css` (17,273 B) and `exams.html` (25,840 B) | `git cat-file -s` per file |
+| Modules referenced on `main` | **zero** — no file on `main` contains the string `SiExam` | `grep -rln SiExam --include=*.html --include=*.js .` |
+| Audio assets on `main` | **absent**. `assets/exam-ambience/voice-1…7.mp3` exist only on the old branch; `main` carries 7 assets, none audio | `git ls-tree -r --name-only main -- assets` |
+| `exam_integrity_events` | **LIVE**, 9 columns, RLS on, 2 policies, **40 rows**, `authenticated` holds INSERT | `pg_class` / `pg_policy` / `count(*)` |
+| …its `attempt_id` | **no foreign key.** The only FK on the table is `user_id → auth.users` | `pg_constraint` |
+| …its `exam_code` | `text`, CHECK length 1..40 | `pg_constraint` |
+| `exam_forms.exam_code` in production | `ACT_MATH`, `EST_MATH_1`, `SAT_FULL` — all `draft`, one form each | `select … group by` |
+| Registry exam codes | `SAT_MODULE_1`, `SAT_MODULE_2`, `SAT_FULL`, `EST_MATH_1`, `EST_MATH_2_L1`, `ACT_MATH`, `PRACTICE` | `grep "code: '"` on `exam-registry.js` |
+| Calculator providers named by the registry | **`provider: null` on all seven**, so `hasRenderableCalculator()` is false for every exam | `grep -n "provider:"` — 7 hits, all null |
+| CSP on `main` | names **no** Desmos origin in any directive | `vercel.json` |
+| CSP on the old branch | names `https://www.desmos.com` in **five** directives: `script-src`, `style-src`, `font-src`, `img-src`, `connect-src` | `git show …:vercel.json` |
+| `api/desmos-config.js` | exists on the old branch, **absent from `main`** | `git ls-tree` both refs |
+| CI at HEAD | **74/74 green** | `node tests/run-all.mjs` |
+| `.ex-*` / `.xc-*` classes in `assignments.html` | **zero** | `grep -cE 'class="[^"]*\b(ex\|xc)-'` |
+
+### 17.2 · The shell's job, stated exactly
+
+> **The Unified Student Assessment Shell is the one surface a student sits an
+> assessment in, whatever produced it.** It owns the frame — identity, timing,
+> navigation, progress, tools, and the item viewport — and it owns none of the
+> content, none of the delivery, and none of the grading.
+
+**[design decision]** The shell is a **frame**, not an engine. The alternative
+considered and rejected: port `exams.html` and make it the student surface, with
+`assignments.html`'s RPC delivery bolted onto it. Rejected because
+`assignments.html` already carries the delivery layer for all three live sources
+(§17.6) and the old engine's delivery layer (`exam-delivery.js`,
+`exam-form-source.js`) reads the Spine tables that the RPCs replaced — adopting
+it would mean re-deriving access rules the database already enforces, which
+§15.14 forbids and which the exam player's own comment forbids in as many words:
+*"teacher_exam_start() calls teacher_exam_can_start() itself; the page never
+re-derives that rule and must not start trying to."* **[existing]**
+
+**Three anti-goals**, each the negation of something the shell could plausibly
+grow into:
+
+1. **The shell never decides who may sit.** **[existing]** Only `can_start` /
+   `can_open` turns a row into a Start button, and those come from the database.
+2. **The shell never grades and never writes an analyzer table.** §17.9.
+3. **The shell is not a second visual system.** §17.8. It renders figures
+   through `window.StimulusView.render()` and through nothing else — the same
+   constraint §16.10.3 puts on Stage 1, extended to the frame around it.
+
+### 17.3 · Shell regions
+
+Seven regions. Each has exactly one owner, and the owner is either the shell or
+the source — never both.
+
+```
+┌─ R1 BAR ─────────────────────────────────────────────────┐
+│ identity · status · exit                                 │
+├─ R2 TOOLBAR ─────────────────────────────────────────────┤
+│ [navslot]        [toolslot]        [timeslot]            │
+├─ R3 STAGE ───────────────────────────────────────────────┤
+│  ┌─ R4 ITEM ────────────────────────────────────────┐    │
+│  │ header · stimulus · prompt · response            │    │
+│  └──────────────────────────────────────────────────┘    │
+├─ R5 FOOTER ──────────────────────────────────────────────┤
+│ prev · palette · next · submit                           │
+└──────────────────────────────────────────────────────────┘
+   R6 OVERLAY   — document.body level, above everything
+   R7 AMBIENT   — no DOM at all
+```
+
+| Region | Owner | Contents | Present when |
+|---|---|---|---|
+| **R1 · Bar** | shell | title, subtitle, exit affordance | always |
+| **R2 · Toolbar** | shell frame, capabilities fill the slots | three named slots: `navslot`, `toolslot`, `timeslot` | always; slots may be empty |
+| **R3 · Stage** | **source** | whichever view the source is showing — chooser, sitting, result, review | always |
+| **R4 · Item** | shell | question header, stimulus mount, prompt, response control | during a sitting only |
+| **R5 · Footer** | shell — **exactly one**, §17.12.1 | previous, question palette, next, submit, and named slots a source may fill | during a sitting only |
+| **R6 · Overlay** | capability | the tool panel and its scrim; anything modal | on demand |
+| **R7 · Ambient** | capability | audio, ambience, integrity listeners — **no element anywhere** | on demand |
+
+**R7 is not a metaphor.** **[measured]** `exam-audio.js` and `exam-ambience.js`
+contain **no reference to `document` at all** — zero matches for `document.` in
+either. `exam-integrity.js` reaches it once, as `root.document`, purely to bind
+`copy` / `contextmenu` / `visibilitychange`, and binds `beforeprint` / `blur` /
+`focus` on the global; it **selects no element**. A capability in R7 attaches to
+the *session*, not to the page, which is why it survives the source re-rendering
+R3.
+
+**R2 replaces two things that exist today and disagree.** **[existing]**
+`assignments.html` renders its clock as `#timer` inside `.bar` and duplicates its
+whole footer for homework (`#footer` and `#hwFooter`, `#palette` and
+`#hwPalette`, four navigation buttons where two would do). `exams.html` renders
+`#navslot`/`#calcslot`/`#timeslot` in one `.ex-bar` and has one `#view`. The
+shell takes the slot model and **[design decision]** renames `calcslot` to
+`toolslot`: the slot is a place for a tool, and naming it for the calculator is
+what makes a second tool a rewrite. The alternative — keep `calcslot` for
+drop-in compatibility with `exam-calculator-launcher.js` — is rejected because
+that module keys on the **attribute** `[data-si-calculator-slot]` and not on the
+id (§17.4), so nothing is gained by the narrower name.
+
+### 17.4 · Mount contracts
+
+Every existing module was read for its DOM coupling. Three tiers came out, and
+they are a measurement, not a taxonomy chosen in advance.
+
+**Tier A — no element coupling (12 modules).** **[measured]** Zero matches for
+`querySelector`, `getElementById` or `getElementsByClassName`, **and** zero for
+`document.body` / `.head` / `.documentElement`. `exam-ambience`, `exam-audio`,
+`exam-calculator`, `exam-calculator-config`, `exam-chrome`, `exam-delivery`,
+`exam-form-source`, `exam-graph`, `exam-graph-zero`, `exam-integrity`,
+`exam-registry`, `exam-stimulus`.
+
+Several of them call `document.createElement` — `exam-stimulus` 9 times,
+`exam-graph-zero` 6, `exam-chrome` 2 — which is **building**, not coupling. A
+module that creates an element and hands it back constrains nothing about where
+it goes; that distinction is the whole tier.
+
+`exam-chrome.js` is the pattern the shell adopts wholesale: `Timer(opts)` and
+`Navigator(opts)` are **factories that build an element and return it** —
+
+```js
+return { el: wrap, set: fn, isHidden: fn, setHidden: fn };          // Timer
+return { el: wrap, setCurrent: fn, setState: fn, setOpen: fn, … };  // Navigator
+```
+
+— and the caller decides where `.el` goes. Neither reads the document.
+
+**Tier B — document-anchored (3 modules).** **[measured]**
+`exam-calculator-launcher.js` scans `[data-si-calculator-slot]`, injects
+`#si-calc-style` into `document.head`, and appends its panel to `document.body`.
+`exam-workspace.js` touches only `document.body.classList` (the
+`si-calc-panel-open` flag). `exam-graph-desmos.js` appends its API `<script>` to
+`document.head` and looks it up by the id `si-desmos-api` so a second open does
+not append a second tag. All three are portable because each anchors to a **data
+attribute or its own id**, never to the host page's structure.
+
+**Tier C — class-coupled (1 module).** **[measured]**
+`exam-reviewer-bar.js` hard-codes `.ex-shell` (its insert target, falling back to
+`document.body.firstChild`) and `.ex-card` (the element it runs its KaTeX
+notation check against), and it writes `data-theme` and two custom properties
+onto `document.documentElement`.
+
+**THE MOUNT RULE — [design decision].**
+
+> **The shell admits Tier A and Tier B unchanged. A Tier C module is admitted
+> only after its selectors become parameters.** No module is modified to make it
+> fit; a module that does not fit is either parameterised or excluded, and which
+> one is a decision recorded at the time.
+
+**Two modules are excluded outright, and this is the boundary the user set.**
+
+- `exam-delivery.js` and `exam-form-source.js` — the old Spine delivery layer.
+  `assignments.html` already owns delivery for all three sources through RPCs.
+  Importing these would create a second delivery path to the same tables.
+  **[user constraint]** *"Do not modify the existing SAT/ACT/EST engine"* — and
+  the cleanest way to honour that is to leave its delivery layer where it is.
+- `exam-reviewer-bar.js` — an **admin** tool for reviewing draft forms on
+  `exams.html`, gated behind `has_role_at_least('admin')` RLS. It is not part of
+  a student's experience and the student shell does not carry it.
+
+**Note on `exam-delivery`, for whoever reads the test list.** **[measured]**
+`tests/exam-delivery.test.mjs` exists on **both** branches and tests **different
+things**: on `main` it reads three migration files
+(`20260830e/f/y_exam_delivery*.sql`); on the old branch it reads
+`exam-delivery.js`. Bringing the module over under its current name would
+collide with a live suite. Since the module is excluded, this is recorded as a
+hazard avoided rather than one to solve.
+
+### 17.5 · The capability contract
+
+A capability is anything the shell hosts that is not the item itself. **[design
+decision]** Every capability declares the same five things, and the shell
+refuses to host one that cannot:
+
+| Field | Meaning |
+|---|---|
+| `id` | stable string, used in tests and in no user-visible text |
+| `region` | which of R1…R7 it occupies |
+| `status()` | `{ ready:boolean, state:string, detail:string }` — **why**, not just whether |
+| `mount(el, opts)` / `unmount()` | for a capability with a region; omitted for R7 |
+| `available(ctx)` | may this session have it at all — asked before `status()` |
+
+`status()` returning a **reason** rather than a boolean is lifted directly from
+`exam-graph-desmos.js`, where it already carries four states
+(`no-key` / `no-tier` / `trial-misuse` / ready) each with a sentence a student
+can read **[measured]**. The shell generalises it because a capability that can
+only say "no" produces a UI that can only say nothing, and §17.10 depends on the
+difference.
+
+**`available()` and `status()` are two gates, deliberately.** `available()`
+answers *may this session have it* (policy, entitlement, licence);
+`status()` answers *can it run right now* (configured, loaded, sized). Collapsing
+them is what lets a licence question be answered by a loading spinner.
+
+### 17.6 · The source model
+
+**[measured]** `assignments.html` dispatches on `S.source`, which takes exactly
+three values, and the three do **not** share one call shape:
+
+| Source | `S.source` | start / save / submit | Timed | Resume key |
+|---|---|---|---|---|
+| Platform sections | `'platform'` | `exam_start` · `exam_save_response` · `exam_submit` | yes | `exam_req_<id>` |
+| Teacher exams | `'teacher'` | `teacher_exam_start` · `teacher_exam_save_response` · `teacher_exam_submit` | yes | `exam_req_t_<id>` |
+| Teacher homework | `'homework'` | six separate H4/H5 RPCs | **no** | — |
+
+Platform and teacher share a signature — both carry `p_ms_delta` and `p_visit`.
+Homework does not, and the page says why in its own words: *"homework never goes
+through start/save/submit above: those dispatch on `S.source` and carry the
+exam's visit and time-delta arguments, which homework has no column for and no
+business recording."* **[existing]** `teacher_homework` has **no
+`duration_minutes` column** at all **[measured]**, so untimedness is a schema
+fact and not a UI preference.
+
+**THE SOURCE ADAPTER — [design decision].** The shell talks to one interface and
+the three sources implement it. The adapter, not the shell, knows which RPC to
+call.
+
+```
+source = {
+  id,                       // 'platform' | 'teacher' | 'homework'
+  list(),                   // rows for the chooser
+  start(id, reqId),         // → attempt
+  save(questionId, answer, opts),   // opts may be ignored by a source
+  submit(attemptId),        // → summary
+  capabilities,             // which of §17.5 this source may have — §17.9
+  resumeKey(id),            // namespaced, never shared
+}
+```
+
+`save(…, opts)` takes an options object rather than positional `msDelta, visit`
+precisely so that homework can ignore what it has no column for, instead of
+being handed zeros that look like measurements.
+
+**The resume key stays namespaced.** **[existing]** `exam_req_` and
+`exam_req_t_` are already distinct because a teacher exam id and a platform
+section id are both uuids, and one key space would let a refresh resume the
+wrong sitting. The shell inherits that rule and extends it to any fourth source.
+
+#### 17.6.1 · `exam_code` means two different things — a hazard, measured
+
+**[measured]** The identifier `exam_code` exists in two table families with two
+incompatible meanings:
+
+| Column | Meaning | Example |
+|---|---|---|
+| `exam_forms.exam_code`, `exam_integrity_events.exam_code`, `SiExamRegistry` codes | **exam type** — which test this is | `SAT_FULL` |
+| `teacher_exams.exam_code` | **share code** — the secret a student types to request access | a 12-character code |
+
+Production confirms the first: `exam_forms` holds exactly `ACT_MATH`,
+`EST_MATH_1`, `SAT_FULL`, which are three of the registry's seven codes, so the
+registry vocabulary and the database vocabulary already agree with **no mapping
+table**.
+
+**The rule — [design decision].** *The shell never passes a teacher exam's
+`exam_code` anywhere an exam-type code is expected.* Two concrete consequences,
+and both are why the rule is written down before any code exists:
+
+1. `exam_integrity_events.exam_code` is **admin-readable** (`exam_integrity_events_admin_read`)
+   **[measured]**. Writing a teacher's share code into it would publish a
+   student's join secret into an admin report.
+2. `SiExamRegistry.get(code)` on a share code returns `null`, and every consumer
+   of a null policy degrades silently — no calculator, no announcement schedule,
+   no answer convention — which looks like a configuration problem and is
+   actually a type confusion.
+
+**A teacher exam and a homework have no exam-type code at all.** What the shell
+passes for them is **OPEN (W-3)**.
+
+### 17.7 · Integrating what already works
+
+The shell **preserves** these; it does not re-implement them. Each is live on
+`main` today and verified deployed. **[existing]**
+
+| Capability | Where it lives now | Under the shell |
+|---|---|---|
+| Stage 1 figure rendering | `window.StimulusView.render()`, 5 call sites in `assignments.html` | R4 stimulus mount, same entry point, unchanged |
+| RPC delivery, all three sources | the `api` object, §17.6 | moves behind the source adapter, same RPCs |
+| Countdown + auto-submit | `startTimer()`, `.timer/.warn/.crit`, submits at zero | R2 `timeslot`, §17.8 resolves the visual conflict |
+| Prev / next / palette | `#prevBtn`/`#nextBtn`/`#palette`, duplicated for homework | R5, **one** footer with named slots — W-5 CLOSED, §17.12.1 |
+| Flag and review | 43 lines mentioning `flag` or `review` | R5 palette states, `Navigator`'s four states |
+| Resume | `exam_req_` / `exam_req_t_` in `localStorage` | `source.resumeKey()`, §17.6 |
+| Homework review screen | `#hwRev`, `.rv-*` | R3, owned by the homework source |
+| Access/attach code boxes | `#codeIn` / `#hwCodeIn` | R3 chooser, owned by the source |
+
+**Nothing in this table is a rewrite.** The shell's first increment is a frame
+that these move into unchanged; an increment that changes one of them at the
+same time is doing two things and is not this increment.
+
+### 17.8 · The visual contract
+
+**Three namespaces exist and none collides today.** **[measured]**
+
+| Prefix | Owner | Where |
+|---|---|---|
+| `.sv-*` | `stimulus-view.js` | figures — the shared renderer, already parity-tested |
+| `.ex-*`, `.xc-*` | old engine | `exam-surface.css` — 23 `.ex-*` (the surface) + 20 `.xc-*` (the chrome) |
+| unprefixed (`.card`, `.timer`, `.choice`, `.footer`) | `assignments.html` | its own `<style>` block |
+
+`assignments.html` uses **zero** `ex-` or `xc-` prefixed classes, so the old
+engine's stylesheet can be introduced without a single collision.
+
+**One latent hazard, named now.** Both surfaces use a `.rv-*` prefix for
+different things: `assignments.html` for its homework **review** screen
+(`.rv`, `.rv-box`, `.rv-exp`, `.rv-hd`, `.rv-p`, `.rv-row`) and
+`exam-reviewer-bar.js` for its **reviewer** bar (`.rv-b`, `.rv-bad`, `.rv-bar`,
+`.rv-flag`, `.rv-ok`, `.rv-out`, `.rv-set`, `.rv-sp`, `.rv-tag`). The two sets
+are **disjoint today** — measured name by name — so nothing is broken. But a
+shared prefix with no owner is how the six conflicting rules that
+`tests/renderer-css-parity.test.mjs` now guards got there in the first place.
+**[design decision]** The shell claims `.as-*`, adds no rule under a prefix it
+does not own, and `exam-reviewer-bar.js` stays excluded (§17.4), which leaves
+`.rv-*` to `assignments.html` alone.
+
+**The pulse conflict — a real disagreement between the two surfaces.**
+**[measured]** `assignments.html` styles the last minute as
+`.timer.crit{…animation:pulse 1.6s ease-in-out infinite}`. `exam-chrome.js`
+refuses exactly that, in a comment: *"Low time is signalled by weight and
+colour, never by motion: a pulsing clock in peripheral vision is exactly the
+pressure the hide exists for."* The same module ships a **hide** control, so its
+position is not an aesthetic preference — it is a design taken twice.
+
+This is **OPEN (W-1)**, and it stayed open on review. It is a
+student-experience decision, the two shipped surfaces disagree, and picking one
+silently while building a frame is exactly the kind of quiet reinterpretation
+this process exists to prevent. **Since 2026-09-05 W-1 also carries a
+constraint**: Increments 1 and 2 add no animation and change no live student
+timing behaviour, and `assignments.html`'s existing `.timer.crit` rule is left
+byte-identical rather than adopted or removed (§17.12, obligation 16).
+
+**Tokens, not values.** **[design decision]** Every colour the shell sets comes
+from the existing custom properties the pages already define (`--cyan-3`,
+`--amber-border`, `--ink-2`, …). The old engine's injected CSS already does this
+— `var(--font-mono, ui-monospace, monospace)`, `var(--cyan-soft)` — so it
+inherits whichever surface it lands on rather than importing a second palette.
+
+### 17.9 · Capability boundaries
+
+**The analyzer boundary is the one that must not move.** **[existing]** It is
+already proven at three layers and the shell adds a fourth obligation: it must
+not become a way around any of them.
+
+1. **Database.** No function names both a homework table and an analyzer table;
+   no database function writes `weakness_signals` at all; only `exam_submit`
+   writes `exam_mistakes` / `exam_practice_sessions`.
+2. **Client.** `finish()` in `assignments.html` returns **before** every writer
+   — a headless submit of a teacher paper called `ExamMistakesLogger.process`,
+   `regenerateWeaknessReports` and `updateStreak` **zero** times, and the
+   identical platform submit called all three.
+3. **Measured end to end.** Two full graded teacher sittings moved
+   `weakness_signals` / `exam_mistakes` / `exam_practice_sessions` by zero.
+
+**THE SHELL'S OBLIGATION — [design decision].** *Analyzer writing is a property
+of the source, declared in `source.capabilities`, and the shell calls no writer
+directly.* Today only `platform` carries it. The alternative — the shell keeps
+the `finish()` guard and branches on `S.source` — is rejected because it puts the
+boundary in the frame, where a fourth source added later inherits whatever the
+branch happened to say. A capability the source must **declare** cannot be
+acquired by omission.
+
+**The integrity boundary is a different question and is not decided here.**
+**[measured]** `exam_integrity_events` is live, holds 40 rows, grants
+`authenticated` INSERT, and its `attempt_id` carries **no foreign key** — so a
+teacher-exam or homework attempt id is writable into it with no schema change at
+all. That makes proctoring cheap to extend and therefore worth deciding
+deliberately: whether a teacher's paper is proctored is a teacher's decision, and
+neither `teacher_exams` nor `teacher_homework` has a column to hold it.
+**OPEN (W-2).**
+
+**What the shell may never do**, in one list:
+
+- decide who may sit, or re-derive any `can_start` / `can_open` rule;
+- grade, or infer correctness from anything the server did not say;
+- write `weakness_signals`, `exam_mistakes`, `exam_practice_sessions`, or
+  `question_records`, for any source;
+- render a figure other than through `window.StimulusView.render()`;
+- pass a share code where an exam-type code is expected (§17.6.1);
+- present a capability whose `available()` is false in any state a student can
+  interact with (§17.10).
+
+### 17.10 · The calculator / tool mount, and the Desmos capability — RESERVED AND LOCKED
+
+**[user constraint], quoted in full because every clause below serves it:**
+
+> *"The unified shell must include the calculator/tool mount and the Desmos
+> capability contract now, even though Desmos is not commercially licensed yet.
+> The capability must be present in the architecture/UI as a disabled,
+> non-selectable capability until Si Math AI has the required commercial Desmos
+> licence. Students must not be able to activate, select, or launch Desmos while
+> the commercial licence is absent. Do not use the internal-evaluation/trial
+> tier for students. Do not expose a fake/partial calculator implementation.
+> Activation must later be a configuration/licence decision, not a rewrite of
+> the shell. Keep the existing licence gate from the old exam engine; do not
+> bypass it."*
+
+#### 17.10.1 · Four independent gates, all closed today
+
+The licence gate already exists and is **not one check**. Each of these was
+measured, and each independently prevents Desmos from reaching a student:
+
+| # | Gate | Where | State today | Measured by |
+|---|---|---|---|---|
+| **G1** | `provider: null` on **all seven** registry entries → `hasRenderableCalculator()` false → `describe().inApp` false → no control renders | `exam-registry.js` | closed | `grep -n "provider:"` — 7 hits, every one `null` |
+| **G2** | The config endpoint refuses without a Supabase session (401), refuses `trial` + `studentFacing`, and returns `{config:{}}` when `SI_DESMOS_CONFIG` is unset | `api/desmos-config.js` | closed — and the **file does not exist on `main`** | `git ls-tree main` |
+| **G3** | `status()` returns `no-key` / `no-tier` / `trial-misuse` before `mount()` will run; `mount()` rejects on a non-ready status | `exam-graph-desmos.js` | closed | source read |
+| **G4** | CSP on `main` names no Desmos origin, so the API script cannot load even with a key | `vercel.json` | closed | directive-by-directive comparison, §17.1 |
+
+**G2 and G3 are the same refusal made twice, deliberately** — the server file
+says so: *"Two independent refusals, because the client-side one lives in code a
+browser could be serving a stale copy of."* **[measured]** The shell preserves
+both. Neither is redundant and neither is removed as a simplification.
+
+**The keeping rule — [design decision].** *The shell adds no gate of its own and
+removes none. It reads G1 and G3 through `available()` and `status()`, and it
+never mounts a provider it did not ask.*
+
+#### 17.10.2 · One student-reachable bypass — a defect, named
+
+**[measured]** `exam-calculator-launcher.js` computes
+
+```js
+function available(code) { return policyAllows(code) || overridden(); }
+function overridden()    { return checkMode() || reviewer; }
+```
+
+and `checkMode()` reads `?desmos-check=1` from the query string, **persists it in
+`sessionStorage`**, and returns true for the rest of the tab. The module's own
+comment concedes the reach: *"the flag is already typeable by anyone signed
+in."*
+
+Under today's four gates a student who typed it would get a **rendered button**
+that opens a panel showing a `no-key` card — nothing launches. But the user
+constraint is about **activate, select, or launch**, and a clickable calculator
+control is the first two. It is also a bypass of exactly the gate the same
+constraint says not to bypass.
+
+**THE RULE — LOCKED 2026-09-05. [user constraint]**
+
+> **The unified student assessment shell must not expose, carry, or depend on
+> `checkMode()`, `?desmos-check=1`, or any student-reachable override path.** A
+> student-facing surface computes `available()` from the exam's own policy
+> alone. **The existing licence gate is kept as defense-in-depth, and is not
+> replaced by another student-side bypass or workaround.** Internal evaluation,
+> if it is ever needed, is a staff-only affordance decided as its own increment
+> with its own approval — never a query string, a session flag, a
+> `localStorage` key, a hash fragment, or a global someone can set from a
+> console.
+
+Two things this rule is careful to keep apart, because collapsing them is how a
+gate gets removed while everyone believes it was kept:
+
+- **The four gates of §17.10.1 stay.** They are not superseded by this rule and
+  not made redundant by it. Removing the override does not license removing a
+  gate; the gates are the licence boundary and the override was a hole in it.
+- **"No replacement" is a requirement, not an aspiration.** The obvious
+  substitutions — a build-time flag, a `?calc=1`, a role read done in the
+  browser, a `window.SI_CALC_TEST` — are all the same defect wearing different
+  clothes, and §17.13's obligations 4, 12 and 14 exist to make each of them fail
+  a test rather than pass a review.
+
+The alternative — port the launcher verbatim and rely on G2/G3/G4 to make the
+override harmless — is rejected because it makes a licence boundary depend on
+three other gates staying shut, and because a control a student can click is a
+control a student has selected whatever happens next.
+
+#### 17.10.3 · How a locked capability presents
+
+**[design decision]** The reserved tool mount is real in the architecture and
+inert in the UI. The distinction the shell draws:
+
+| | Disabled capability | Absent capability |
+|---|---|---|
+| Region R2 `toolslot` | **exists**, empty | exists, empty |
+| Control rendered | **none** | none |
+| Focusable / clickable | **no** | no |
+| In the DOM as a disabled button | **no** | no |
+| Named to the student | **no** | no |
+
+**A locked capability renders nothing at all** — not a greyed button, not a
+tooltip, not a lock icon. Three reasons, and the first is the user's:
+
+1. *"non-selectable"* is met by absence and only approximately by `disabled` — a
+   `disabled` button is still in the accessibility tree, still announced, and
+   still a thing a student can try to press.
+2. **[measured]** `describe()` already reaches the same conclusion in its own
+   comment about `inApp`: *"Always false today. When a licensed provider is
+   registered this becomes true and the page may offer a control; until then it
+   is what guarantees no button appears."* The shell is not inventing a posture;
+   it is keeping one.
+3. Naming an unlicensed tool in a student-facing UI is the marketing use
+   §6.b of the API terms does **not** license. Absence has no trademark
+   question.
+
+**What a student does still see is the policy badge that exists today**
+**[existing]** — `#qCalc`, *"Calculator allowed"* — because that is a statement
+about the **exam**, not an offer of a tool, and it is already live and correct.
+
+**Reaffirmed on review, 2026-09-05 — [user constraint].** Three prohibitions
+that were quoted in this section's preamble are now approved decisions in their
+own right, and none of them is a default that a later increment may reconsider
+without a new approval: **no trial tier for students**, **no greyed or disabled
+calculator control**, and **no partial or fake calculator implementation**.
+Desmos remains **RESERVED, NON-SELECTABLE and NON-LAUNCHABLE** until a
+commercial licence and its configuration exist. Activation, when it comes, is
+configuration- and licence-driven and requires **no shell architecture
+rewrite** — §17.10.4 is the whole list, and it is four steps with no fifth.
+
+#### 17.10.4 · What activation later requires — and does not
+
+**[design decision]** Activation must be *configuration*, so this is the whole
+list, written now so a later reader can check that no rewrite crept in:
+
+1. Set `SI_DESMOS_CONFIG` with `tier: "commercial"` in the Vercel environment.
+2. Bring `api/desmos-config.js` onto `main` — it does not exist there.
+3. Add `https://www.desmos.com` to the five CSP directives (§17.1).
+4. Name `provider: 'desmos'` on whichever registry entries the licence covers.
+
+**There is no fifth step, and that is measured.** **[measured]**
+`exam-graph-desmos.js` **self-registers** on load —
+`root.SiExamCalculator.registerProvider('desmos', root.SiExamGraphDesmos)` is
+the last thing its own IIFE does, and `exam-graph-zero.js` does the same. So no
+wiring code exists to write, and registration is **not** a gate: G1 is, because
+`isInAppAvailable()` needs the registry to *name* a provider before the
+registered one can be looked up. Loading the file changes nothing on its own.
+
+**Not on the list, and this is the test of the design:** no change to the shell,
+no change to any region, no change to the source adapter, no change to
+`available()`/`status()`, no new stylesheet, no new page. If activation ever
+needs one of those, the shell was specified wrong.
+
+**Three things activation must never be:** the trial tier served to students
+(§2.a, refused in two places), a partial or hand-written calculator standing in
+for the real one, or the licence question answered by a UI flag.
+
+#### 17.10.5 · The reserved contract, in the shell's own terms
+
+```
+capability 'calculator':
+  region     R2.toolslot (control) + R6 (panel)
+  available  → source.capabilities.calculator
+               && SiExamCalculator.describe(examTypeCode).inApp     // G1
+               // and nothing else — no query string, no session flag
+  status     → provider.status()                                    // G3
+  mount      → provider.mount(panelEl, opts)
+  unmount    → provider.unmount()
+  locked     → available() === false ⇒ render nothing (17.10.3)
+```
+
+`examTypeCode` is the exam-**type** code of §17.6.1, never a share code. For a
+source that has no exam-type code, `available()` is false — **OPEN (W-3)**
+decides whether that stays the answer.
+
+### 17.11 · Architecture constraints
+
+All **[existing]**, all inherited, none new:
+
+1. **No build step, no bundler, no `package.json`.** The same bytes run in the
+   browser, in Deno and in Node under CI. The shell is a plain IIFE assigning to
+   `window` **and** `module.exports`, like every module already in the tree.
+2. **Tests execute the real shipped source** through `tests/_source.mjs`, never a
+   paraphrase.
+3. **CI discovers suites by `readdirSync`** — a new `*.test.mjs` is picked up
+   with no registration.
+4. **Frozen files stay frozen.** `mock-exam.html`, `weakness.html`, `focus.html`,
+   `regenerate-reports.js`, `exam-mistakes-logger.js`, `taxonomy.js`,
+   `taxonomy.core.js`. The shell touches none of them.
+5. **No schema, no migration, no RPC.** The shell is client code. Any increment
+   that turns out to need a migration stops and asks.
+6. **CDN dependencies stay pinned with SRI.**
+7. **Load order must not matter.** Modules resolve their dependencies lazily from
+   the global at call time — the `taxonomy-compat.js` pattern, and the pattern
+   Stage 1's `EXPR()` shim already uses.
+
+### 17.12 · What this section does NOT decide
+
+**Four gaps remain open.** W-5 was decided on review and is recorded closed in
+§17.12.1. Each of the four below is a real decision, and **none is answered
+here**.
+
+| | Gap | Why it is open | Cost of guessing |
+|---|---|---|---|
+| **W-1** | Does the last minute pulse? | The two shipped surfaces disagree, and `exam-chrome.js`'s refusal is reasoned and paired with a hide control (§17.8) | A student-experience decision taken by whichever file was copied first |
+| **W-2** | Is a teacher's paper proctored? | `exam_integrity_events` accepts any attempt id with no FK, so it is cheap — and neither teacher table has a column to record the teacher's choice (§17.9) | Proctoring students because it was easy, without the teacher deciding |
+| **W-3** | What exam-type code does a teacher exam or a homework carry? | There is none, and `exam_code` on `teacher_exams` means something else entirely (§17.6.1) | A share code written into an admin-readable log |
+| **W-4** | Does the shell ship as one page or one module? | `assignments.html` is 1,349 lines with its logic inline; the shell could be a module it loads or a restructure of the page | A 1,300-line rewrite entering as an "increment" |
+
+**W-1 stays open by decision, not by neglect — [user constraint], 2026-09-05:**
+
+> *"Do not choose or implement a pulsing-clock behaviour yet. Do not add
+> animation or change live student timing behaviour in Increment 1 or
+> Increment 2. Record W-1 as an open decision blocking Increment 3."*
+
+So W-1 now carries a constraint as well as a question. Until it is settled:
+**Increments 1 and 2 add no animation and change no live student timing
+behaviour** — `assignments.html`'s existing `.timer.crit` pulse is left exactly
+as it is, neither adopted into the shell's contract nor removed from the page.
+Leaving a live behaviour untouched is the only move available that does not
+pre-answer the question, and it is deliberately not the same as endorsing it.
+**W-1 blocks Increment 3.**
+
+#### 17.12.1 · W-5 — CLOSED: one unified footer (2026-09-05)
+
+**[user constraint], decided on review:**
+
+> *"The shell owns one footer. Capabilities/sources may contribute information
+> through defined footer slots, but must not create competing/duplicate
+> footers."*
+
+**The rule.** R5 is **one** footer, owned by the shell and built once. A source
+or a capability contributes to it through **named slots** and never by rendering
+a footer of its own. There is no second footer, no per-source footer, and no
+capability that appends one at `document.body` level — R6 is for overlays, and
+an overlay is not a footer.
+
+**What it replaces.** **[measured]** `assignments.html` today carries two
+complete footers — `#footer` and `#hwFooter`, `#palette` and `#hwPalette`, and
+four navigation buttons (`#prevBtn`/`#nextBtn`, `#hwPrevBtn`/`#hwNextBtn`) where
+two would do. Under W-5 that becomes one footer whose contents are
+source-parameterised: the homework source supplies its own submit label and its
+own palette states, and supplies them **into** the shell's footer.
+
+**Why the slot model rather than a source-owned footer.** The alternative
+considered — let each source render whatever footer it likes — is rejected for
+the reason W-5 was open in the first place: two footers built independently
+drift, and the drift shows up as two different answers to *"what does Previous
+do on the last question?"* A slot has a contract; a duplicate has a habit.
+
+**What this decision does NOT authorize.** It is a rule for the shell, not a
+change to a live page. `assignments.html`'s two footers stay exactly as they are
+until the increment that builds R5 — which is **Increment 3**, still blocked on
+W-1. W-5 being closed removes one of Increment 3's two blockers and starts
+nothing.
+
+### 17.13 · Validation obligations
+
+**[design decision]** No increment against this section merges without these.
+They are stated now so that a later suite cannot be written to fit whatever got
+built.
+
+**Structural — assertable without a browser:**
+
+1. The shell exposes exactly the seven regions of §17.3, named.
+2. The `toolslot` is present and empty when no tool capability is available.
+3. **No control, focusable element or student-visible string names a calculator
+   or Desmos while `available()` is false.** This is the §17.10.3 assertion and
+   it must be able to go red: a mutant that renders a `disabled` button must
+   **fail** the suite.
+4. The shell contains **no** `desmos-check` reference and no `sessionStorage`
+   override of `available()` (§17.10.2). A mutant restoring `checkMode()` must
+   fail.
+5. `available()` reads the registry policy and nothing else — asserted against
+   the source with `--` comments stripped, per the rule that a check reading
+   prose is a check that can only ever raise.
+6. Every source adapter implements all of §17.6's interface; a missing method
+   fails.
+7. The shell calls no analyzer writer by name, for any source (§17.9).
+8. The shell renders figures through `StimulusView.render()` and through no
+   second path.
+9. `.as-*` is the only prefix the shell's own CSS introduces; no rule under
+   `.sv-*`, `.rv-*`, `.ex-*` or `.xc-*` (§17.8).
+10. The four Desmos gates are each asserted **closed**, separately — so that
+    opening one by accident fails four checks and not zero.
+
+**Behavioural — headless, in a browser:**
+
+11. A platform sitting calls `ExamMistakesLogger.process`, `regenerateWeaknessReports`
+    and `updateStreak`; a teacher sitting and a homework sitting call each of
+    them **zero** times. This is the existing proof and it must survive the
+    shell.
+12. `?desmos-check=1` on a student surface renders **no** calculator control —
+    and neither does any other query string, hash fragment or stored flag. The
+    browser check drives the same substitutions obligation 14 asserts
+    statically, because a static scan proves the code does not *read* a flag
+    and only a run proves the control does not *appear*.
+13. Resume keys stay namespaced across all three sources; a refresh on one never
+    resumes another.
+
+**Added on review, 2026-09-05.** Three obligations the three decisions bring
+with them. They are numbered after the original thirteen rather than folded into
+them, so that a reference elsewhere in this section still points where it did.
+
+14. **No student-reachable override path of any kind reaches `available()`**
+    (§17.10.2, LOCKED). Obligation 4 names the one path that exists today; this
+    is the general rule, and it is deliberately written against the *shape*
+    rather than the spelling: `available()` is asserted to derive from the exam
+    policy alone, with no read of `location.search`, `location.hash`,
+    `sessionStorage`, `localStorage`, `document.cookie`, or any settable global.
+    Each is its own mutant, and **a substitution that merely renames
+    `desmos-check` must fail this check even though it passes 4.** Structural.
+15. **Exactly one footer** (W-5, §17.12.1). The shell builds one R5, and no
+    source or capability renders a second. A mutant in which a source appends
+    its own footer — or appends one at `document.body` level — must fail.
+    Structural.
+16. **No animation is introduced and no live student timing behaviour changes**
+    while W-1 is open (§17.12). Increments 1 and 2 add no `animation`,
+    `transition` or `@keyframes` rule to any timing surface, and leave
+    `assignments.html`'s existing `.timer.crit` **byte-identical**. Structural,
+    and the byte-identity half is the part that can actually go red.
+
+**Mutation-tested, not merely green.** Every assertion above must be shown to go
+red under a mutant that breaks it. The three the reviewer should demand first
+are **3**, **12** and **14**, because a "no button appears" assertion passes
+trivially against a page that renders nothing at all — a fixture in which the
+button *would* appear if the gate were open is what makes it evidence — and
+because 14 is the only one of the three that a renamed bypass cannot walk
+past.
+
+### 17.14 · The increment sequence
+
+Approved so far: **Increment 1 only**, and Increment 1 is this section.
+
+| # | Increment | Status | Adds |
+|---|---|---|---|
+| **1** | Shell definition | **APPROVED with three decisions, 2026-09-05** (§17.10.2 LOCKED · W-1 open · W-5 closed) | nothing executable |
+| **2** | Ambience | **BUILT, INERT — 2026-09-05, §17.15** | `exam-ambience.js` + 7 mp3 assets + the `.gitattributes` audio rules. **No CSP change** — see the correction below |
+| **2b** | Audio / announcements | **DEFERRED to its own increment** | `exam-audio.js` needs `exam-registry.js` for its schedule and can serve only the platform source until W-3 is settled (§17.15.3) |
+| **3** | Chrome adaptation | not started | `exam-chrome.js` Timer + Navigator into R2/R5 — **blocked on W-1** (W-5 closed, §17.12.1) |
+| **4** | Calculator / Desmos | not started | licence-gated; nothing student-visible until §17.10.4 is done |
+| — | Integrity | not scheduled | **blocked on W-2** |
+
+**CSP — a correction to this table, 2026-09-05.** The Increment 2 row read
+*"no CSP change (`media-src 'self' data: blob:` already covers them)"*. The
+conclusion was right and **the directive was wrong**. `media-src` governs
+`<audio>` and `<video>` elements; `exam-ambience.js` loads its clips with
+`root.fetch('assets/exam-ambience/<name>.mp3')` and `decodeAudioData`, and a
+`fetch` is governed by **`connect-src`**. The live policy is
+`connect-src 'self' https://…supabase.co wss://…supabase.co`, and `'self'`
+covers a same-origin relative fetch — so **no CSP change is required**, for that
+reason and not the one first recorded. Naming the wrong directive is how a later
+CSP edit breaks this silently: someone tightening `connect-src` would have no
+reason to think audio depended on it.
+
+**[user constraint]** *"Do not begin Increment 2 (audio) until this shell
+definition is reviewed and explicitly approved."* Approval of this section is
+approval of the **definition**, and is not approval of Increment 2.
+
+**Increments 1 and 2 carry W-1's constraint** (§17.12): no animation, and no
+change to live student timing behaviour. Increment 2 satisfies it by
+construction — it lives entirely in R7 and touches no DOM — but the constraint
+is recorded against both increments rather than against the one that could
+plausibly break it, because a rule that only binds where it is inconvenient is
+not a rule.
+
+**A note on order.** Increment 3 is where the shell becomes real, and it is
+still blocked — on W-1 alone now that W-5 is closed. Increment 2 is unblocked
+and adds a capability in R7 that touches no DOM at all. That is why audio comes
+first: it is the increment that can be built without pre-answering W-1.
+
+### 17.15 · Increment 2 — Ambience: BUILT AND INERT (2026-09-05)
+
+**The capability ships; nothing calls it.** `exam-ambience.js` is in the tree
+with its seven recordings and a 58-check suite, and **no page loads it, no page
+enables it, and no student can hear it.** That is the increment as approved, not
+an omission: turning it on needs a control, the control is a shell decision, and
+inventing one to make the capability look finished is exactly the move this
+process exists to stop.
+
+#### 17.15.1 · What shipped
+
+| File | Change | Evidence |
+|---|---|---|
+| `.gitattributes` | **+6 lines** — `*.mp3` / `*.wav` / `*.ogg` / `*.m4a` marked `binary` | now byte-identical to the old branch's copy; was 49 lines / 1,961 B with **no audio rule** |
+| `assets/exam-ambience/voice-1…7.mp3` | **7 new binaries**, 1,341,954 B | every one byte-identical to source — blob sha, md5 and size all matched, and all seven begin `49 44 33` (`ID3`) |
+| `exam-ambience.js` | **new**, 441 lines / 21,311 B | verbatim from source **except** the F-5 fix; the full diff against source is 9 added lines and nothing else |
+| `tests/exam-ambience.test.mjs` | **new**, 58 checks | the source suite ported unchanged, plus the F-5 section |
+
+**`.gitattributes` had to land first, and that ordering is the point.** `main`
+carries `* text=auto eol=lf` and binary rules for eleven image, font and
+document types — and none for audio. Committing an mp3 under that policy invites
+`text=auto` to sniff it as text and rewrite bytes on checkout; the old branch's
+own note says so in as many words: *"The first audio in this repository; without
+these lines `text=auto` would sniff them as text and rewrite bytes on
+checkout."*
+
+**The per-clip measurements came across untouched.** `TRIM`, `PEAK_DBFS` and
+`DURATION_S` describe the same bytes as the shipped files, and the suite asserts
+the no-clipping invariant arithmetically — `PEAK + TRIM + gain` under 0 dBFS for
+every clip, at the shipped gain and at `safeMax` — so it can be checked in CI
+without decoding an mp3.
+
+#### 17.15.2 · F-5 — the one behavioural change, and why it is a fix
+
+**The defect, measured before the fix.** In the module as written,
+`disable()` called `ctx.suspend()` and **nothing anywhere called `resume()`** —
+the whole file referenced `ctx.state` exactly once, in `disable()`. So:
+
+- `disable()` then `enable()` left the context suspended. The layer reported
+  success, armed the full schedule, and played **silence**.
+- A context constructed outside a user gesture is **born suspended**, so this
+  was silence on the *first* enable too, not only the second.
+
+**The fix is one guarded line** in `enable()`, immediately after `context()`
+succeeds and before `on = true`:
+
+```js
+try { if (ctx.state === 'suspended' && ctx.resume) ctx.resume(); } catch (e) {}
+```
+
+Deliberately not awaited, for the reason nothing else in this file is awaited:
+events are armed against the module clock rather than against the resume, and a
+rejected promise must not take the layer down. Nothing else moved — no schedule
+rule, no gain, no trim, no planner, no measurement table.
+
+**Why the existing suite could never have caught it.** Its harness supplies
+**no `AudioContext`**, so `context()` returns null and `enable()` returns false;
+every one of its original assertions passes without the layer ever having run.
+The F-5 section therefore builds its own sandbox with a fake context that
+records `suspend`/`resume` calls — a call log, because a state assignment that
+merely looks like a fix would satisfy a state check alone.
+
+**Mutation-tested, three mutants, all killed:**
+
+| Mutant | Result |
+|---|---|
+| the fix removed entirely (the pre-fix module) | **5 checks FAILED** |
+| `resume()` called unconditionally (state guard dropped) | **4 checks FAILED** |
+| the `&& ctx.resume` existence guard dropped | **1 check FAILED** |
+
+The second mutant matters as much as the first: it proves the assertions test
+the *guard* and not merely the presence of a `resume()` call, so "resume
+everything, always" is not a passing answer.
+
+#### 17.15.3 · What this increment deliberately did NOT do
+
+Each of these was decided, not overlooked.
+
+- **No caller.** `assignments.html` is untouched — zero lines changed. The
+  capability is inert by construction.
+- **No student control (F-4).** Ambience has **no preference storage at all** —
+  zero `localStorage` references in the module — and its only controls lived in
+  `exam-reviewer-bar.js`, which §17.4 excludes. A control is a shell decision
+  and belongs to its own increment.
+- **No audio / announcements (Increment 2b).** `exam-audio.js` is not here and
+  neither is `exam-registry.js`. Two measured reasons: the announcement schedule
+  must come from the registry (*"No timing rule is duplicated here, and none may
+  be added"*), and of the three sources only **platform** carries an `exam_code`
+  the registry recognises — `student_my_teacher_exams` returns none and
+  `student_my_homework` has no duration column at all. That is **W-3** biting
+  exactly where §17.6.1 predicted, and it is not settled here.
+- **No CSP change.** Measured unnecessary — see the correction in §17.14.
+- **No schema, RPC, migration, Stage 1, renderer, calculator, Desmos, integrity,
+  reviewer-bar or workspace work**, and no timer or animation change: **W-1
+  stays open** and `.timer.crit` is untouched. **W-5 stays closed** — a module
+  that creates no element cannot create a second footer.
+
+#### 17.15.4 · A note for whoever wires this up
+
+`exam-ambience.js` is a **module-clock** capability: `noteModule(key)` resets
+its schedule and `enable()` starts it. Its fixed points sit at 10:00, 20:00,
+32:00, 33:00 and 34:00 of a module, and `schedule()` defaults to **35 minutes** —
+the SAT module shape. A platform section or a teacher exam has a duration to
+hang that on. **Homework does not**: it is untimed and has no module, so what a
+module clock would even mean there is an open question, not a wiring detail.
+
+### 17.16 · F-4 — CLOSED: the room-sound control (2026-09-05)
+
+Increment 2 shipped a capability nothing could start. **F-4 is the control that
+starts it**, and it is deliberately the smallest one that works: an icon button
+in R1, on the exam screen, off until a student asks.
+
+**What this closure authorizes, exactly.** The **minimum R1 integration on
+`assignments.html`** and nothing else. It is **not** authorization for R2, for
+Increment 3, for a settings surface, or for any further shell work.
+**[user constraint]:** *"Do not interpret this as authorization for Increment
+3/R2 work."*
+
+#### 17.16.1 · The three locked decisions
+
+**DEFAULT OFF.** One boolean at `localStorage['simath_exam_ambience']`, and
+**only the exact string `'on'` counts as on** — `'ON'`, `'true'`, `'1'` and
+`'yes'` all read as off, each asserted. Every failure path returns false:
+storage that throws, and storage that does not exist as an identifier at all,
+are two different failures and both are tested. A student who has never chosen
+hears nothing, and a blocked `localStorage` is not a reason to start playing
+sound at somebody.
+
+**SITTING ONLY.** The control is shown on `sitting` and on no other screen —
+`pick`, `hwSit`, `hwRev`, `done` and `loading` all hide it *and* silence the
+layer. The reason is the one `show()` already gives for the clock: ambience is a
+**module** clock with fixed points at 10:00, 20:00 and 32:00 of a module, and
+homework is untimed and has no module. **No ambience control on homework.**
+
+**`assignments.html` IS in scope**, for F-4 and for the reason the audit gave:
+R1 on that page is the only student shell that exists. R2 is a §17.3
+specification that nothing builds yet.
+
+#### 17.16.2 · The control
+
+An **icon button**, 34×34, between the spacer and `#timer`. Not a labelled pill:
+the bar is 58px, already carries three things on a phone, and **this page has no
+width breakpoint at all** — its only `@media` is `prefers-reduced-motion`.
+
+It carries a **real accessible name**, `aria-label="Room sound"`, and its state
+lives in **`aria-pressed`** — which is also what the CSS keys on, so the styling
+and the accessibility tree cannot disagree; there is no second class to forget.
+The SVG is `aria-hidden`. **The house `.toggle` was deliberately not reused:**
+`settings.html` ships four of them and **none has an accessible name**, so a
+screen reader announces an unnamed checkbox.
+
+**Lifecycle.** Entering `sitting`: paint from the stored preference, call
+`noteModule(attempt_id)`, and `enable()` **only if the preference is already
+on**. Leaving `sitting`: always `disable()`, so the layer can never outlive the
+sitting it belongs to — the failure the old engine's calculator panel needed a
+`MutationObserver` to fix. A click flips, persists, paints and applies.
+`noteModule()` is idempotent on an unchanged key, so the `show('sitting')` that
+recovers from a failed submit does not restart the schedule.
+
+With no `SiExamAmbience` loaded the control **is not rendered at all**, rather
+than rendered dead.
+
+#### 17.16.3 · Isolation, asserted rather than asserted-to
+
+| Boundary | How it is held |
+|---|---|
+| **W-1, still OPEN** | The three `.timer` rules are asserted **byte-identical**, the page still contains exactly **one** `animation:pulse`, and the control animates nothing. The preference block is asserted to contain no `S.tick`, `S.endsAt`, `startTimer` or `timer`. |
+| **W-5, still CLOSED** | The page still has exactly **two** footer ids. The block contains no `createElement` and no `Footer`. |
+| **Desmos / calculator** | The block contains no `desmos`, `checkMode` or `Calculator`. No bypass was added, and none could be: this control never consults `available()`. |
+| **Audio / registry** | No `SiExamAudio`, no `SiExamRegistry`. W-3 is untouched. |
+| **Delivery** | The block calls no RPC and reads no `S.source`. It reads one storage key and `S.attempt.attempt_id`. |
+| **Schema** | None. `profiles` carries **column-level UPDATE grants** — 24 of 39 columns — so a profile-backed preference would need a column *and* a grant, i.e. a migration. `localStorage` avoids that entirely. |
+
+#### 17.16.4 · How it is proved
+
+The suite proves **wiring** by reading the page source and **rules** by *running*
+them: the preference block is sliced out and executed against fake storage,
+because *"returns false when `localStorage` throws"* is not a claim a regex can
+make. `tests/teacher-class-patterns.test.mjs` set that precedent.
+
+`tests/exam-page.test.mjs` goes **47 → 119 checks**. **Ten mutants, ten killed:**
+
+| Mutant | Checks failed |
+|---|---|
+| default ON when the key is absent | 14 |
+| storage failure falls back to ON | 3 |
+| gate widened to homework | 2 |
+| leaving the screen no longer silences | 5 |
+| autoplay — enable regardless of choice | 1 |
+| accessible name removed | 1 |
+| `noteModule` no longer called | 3 |
+| the preference is never written | 7 |
+| an animation added to the control | 2 |
+| the button moved after the clock | 1 |
+
+**One of them had to be rewritten, and that is worth recording.** The first
+attempt at the last mutant appended a comment after the clock instead of moving
+the button, so both `indexOf` values were unchanged and it survived — a mutant
+that tested nothing, not a check that missed something. Re-run as a genuine
+swap of the two elements, it was caught. *A surviving mutant is a claim about
+the test only once the mutant is known to bite.*
