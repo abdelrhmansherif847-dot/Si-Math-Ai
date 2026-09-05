@@ -375,6 +375,83 @@
       "statement_b": "it is headed Unit Conversion, holds 25 items, and one of them is a conditional probability",
       "why": "the third file here to undercount by exactly one, after S-012 and S-014. Item 19 is the same construction as item 5 of S-014 and groups with it across the two files",
       "resolution": "NONE. All 25 are coded; item 19 is filed under Probability with the archetype the probability corpus defined, which is how the cross-file duplicate surfaced."
+    },
+    {
+      "conflict_id": "SRC-0023",
+      "kind": "SOURCE_CONFLICT",
+      "opened": "2026-09-05",
+      "status": "open",
+      "about": "what the S-016/S-017 filename names",
+      "statement_a": "the file is named LINESANGLES_140_REAL_QUESTIONS",
+      "statement_b": "36 of its 140 items are Geometry (Lines & Angles); block B is 12 per cent lines and angles, 25 items of solid geometry and 35 involving similarity, under its own heading \"16 Geometry\"",
+      "why": "the same title-versus-content pattern as S-009/S-010, and visible here in the file itself: the two blocks carry DIFFERENT headings, and block B’s names the content correctly while the filename does not",
+      "resolution": "NONE. Block A observes lines_and_angles and block B observes geometry, each from its own printed heading; every item is filed on what it tests."
+    },
+    {
+      "conflict_id": "SRC-0024",
+      "kind": "SOURCE_CONFLICT",
+      "opened": "2026-09-05",
+      "status": "open",
+      "about": "whether the file holds 140 distinct questions",
+      "statement_a": "the filename claims 140 REAL QUESTIONS and 140 items are printed",
+      "statement_b": "15 of block B’s 102 items reprint a block A item; the fingerprints place 13 cross-block groups and reading both sides confirms the 15 are verbatim, so the file holds 125 distinct constructions",
+      "why": "items 41 and 83 of block B are the SAME block A item printed twice more, so one construction appears three times in one file. A corpus that counted printed items would over-count this source by twelve per cent",
+      "resolution": "NONE. All 140 are coded and the duplicate groups carry the relation; nothing is dropped, because which copy a future reader meets is itself a fact about the source."
+    },
+    {
+      "conflict_id": "SRC-0025",
+      "kind": "SOURCE_CONFLICT",
+      "opened": "2026-09-05",
+      "status": "open",
+      "about": "what \"REAL\" claims for S-017",
+      "statement_a": "the filename asserts real administered questions for all 140",
+      "statement_b": "only block A’s 38 carry an administration tag; block B’s 102 carry no tag, no watermark and no channel annotation of any kind",
+      "why": "provenance is read from content signals, never from a filename (D-1). Block B is the fourth untagged bank block in the corpus and, like the others, it is registered UNKNOWN",
+      "resolution": "NONE. S-016 is recalled_unofficial / OBSERVED, S-017 is unknown / UNKNOWN and NOT_DIRECT_SOURCE. The filename’s claim is recorded, not believed."
+    },
+    {
+      "conflict_id": "SRC-0026",
+      "kind": "SOURCE_CONFLICT",
+      "opened": "2026-09-05",
+      "status": "open",
+      "about": "block B’s numbering",
+      "statement_a": "block B is numbered 1 to 104 without a break in the printed sequence",
+      "statement_b": "items 35 and 43 are absent and their slots are printed empty, giving 102 items",
+      "why": "the file’s total reconciles with its filename ONLY because those two gaps cancel: 38 + (104 - 2) = 140. A compilation that had renumbered would have hidden the omission and the count would still have read 140",
+      "resolution": "NONE. Coded as 102 items at their printed ordinals; the gaps are recorded on the S-017 row rather than closed by renumbering."
+    },
+    {
+      "conflict_id": "SRC-0027",
+      "kind": "SOURCE_CONFLICT",
+      "opened": "2026-09-05",
+      "status": "open",
+      "about": "item 37 of block A",
+      "statement_a": "the item gives one angle on a transversal of two parallel lines and prints four options",
+      "statement_b": "every angle in that figure is the given angle or its supplement, and neither is among the four printed options",
+      "why": "checkable from the construction alone, which matters because this file prints NO answer key: the defect was found by reading the figure, not by disagreeing with a key. Verified against a 420-dpi render of page 9",
+      "resolution": "NONE. The item is coded on its construction and carries SOURCE_CONFLICT. No answer is invented for it."
+    },
+    {
+      "conflict_id": "SRC-0028",
+      "kind": "SOURCE_CONFLICT",
+      "opened": "2026-09-05",
+      "status": "open",
+      "about": "item 66 of block B",
+      "statement_a": "the stem calls the solid a right triangular prism and gives its base area as an expression",
+      "statement_b": "the next two sentences call the same solid a rectangular prism, twice, and the question asks for the surface area of \"the right rectangular prism\"",
+      "why": "which perimeter the lateral term uses is not settled by the words, so the item has two defensible readings. Unlike item 37 this one cannot be adjudicated from the figure, because there is no figure",
+      "resolution": "NONE. Coded as A-SOL-PRISM-EXPR-SURFACE with competing readings recorded and SOURCE_CONFLICT on the record."
+    },
+    {
+      "conflict_id": "SRC-0029",
+      "kind": "SOURCE_CONFLICT",
+      "opened": "2026-09-05",
+      "status": "open",
+      "about": "the figure labels of block A item 19 and its block B reprint, item 104",
+      "statement_a": "the prose names the parallel lines r and s and the transversals t, u and w",
+      "statement_b": "the figure labels those five lines a, b, c, d and e, and the letter d also names one of the marked angles in the prose",
+      "why": "one defect printed twice, which is itself the evidence that item 104 is a reprint rather than a re-authoring. A solver has to guess which \"d\" the given refers to",
+      "resolution": "NONE. Both copies are coded identically and both carry the note; the mismatch is recorded on the conflict rather than repaired in the record."
     }
   ]
 }

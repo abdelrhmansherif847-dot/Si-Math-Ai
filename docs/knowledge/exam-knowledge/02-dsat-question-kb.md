@@ -1945,3 +1945,176 @@ cross-file**. `taxonomy.core.js`, the KDG, the generator, the EST system and
 every exam artifact are untouched.
 
 *Twelfth ingestion, 2026-09-05.*
+
+## 29. Thirteenth ingestion: the lines-and-angles corpus
+
+`e7c654a1-LINESANGLES_140_REAL_QUESTIONS.pdf` — sha256 `03f78e1d0b1e…`,
+4,576,009 bytes, **35 pages**, read from the page tree with both routes agreeing.
+Registered as **two** sources, because it is two documents:
+
+| | S-016 | S-017 |
+|---|---|---|
+| pages | 1–9 | 10–35 |
+| items | 38 | 102 |
+| heading | "Lines&Angles" | "16 Geometry", first page of the block only |
+| per-item metadata | a named administration | nothing |
+| text layer | present, complete | four raster images per page, 16–130 characters |
+| provenance | `recalled_unofficial`, **OBSERVED** | `unknown`, **UNKNOWN** |
+| generation | EXCLUDED | NOT_DIRECT_SOURCE |
+
+**No answer key anywhere in 35 pages** — the second such file, after triangles.
+Forty-five of the 140 items are student-produced responses whose answers cannot
+be checked against the compiler's own. Nothing here is verified the way the
+polynomials corpus was; the coding is a reading of construction and is recorded
+as that.
+
+### The block headings disagree with the filename, and one of them is right
+
+The filename says LINESANGLES. Block A's own heading agrees with it. Block B's
+does not: it prints **"16 Geometry"**, and the content matches that word rather
+than the filename's. Measured across the file:
+
+| | block A | block B | file |
+|---|---|---|---|
+| Geometry (Lines & Angles) | 24 / 38 | 12 / 102 | **36 / 140** |
+| Triangles | 12 | 38 | 50 |
+| Polygons | 2 | 48 | 50 |
+| Circle | 0 | 4 | 4 |
+
+Twenty-five of block B's items are solid geometry — prisms, pyramids, cones,
+spheres — and thirty-five turn on similarity. A reader trusting the title would
+mis-shelve three quarters of the file. This is the third title-versus-content
+mismatch in the programme and the first where **the source itself supplies the
+correction**, in its own second heading. Registered as **SRC-0023**.
+
+### The file prints 140 items and holds 125
+
+Fifteen of block B's 102 items are block A items reprinted verbatim. The
+fingerprints place thirteen cross-block groups; reading both sides of each pair
+confirms all fifteen are word-for-word, numeral-for-numeral reprints. Items 41
+and 83 of block B are the **same** block A item printed twice more, so one
+construction appears three times inside one file.
+
+```
+A1↔B102  A2↔B17  A7↔B99  A10↔B39  A12↔B2   A13↔B22  A15↔B4
+A18↔B41↔B83      A19↔B104         A25↔B100 A26↔B101 A31↔B3
+A35↔B8   A38↔B7
+```
+
+A corpus that counted printed items would over-count this source by twelve per
+cent. All 140 are still coded: which copy a future reader meets is itself a fact
+about the source, and dropping one would erase it. Registered as **SRC-0024**.
+
+### The filename's count only reconciles because of two holes
+
+Block B is numbered 1 to 104 with **35 and 43 absent**, their slots printed
+empty. So 38 + (104 − 2) = 140, exactly the filename's figure. Had the compiler
+renumbered after dropping two items, the count would still have read 140 and
+nothing would have shown. Registered as **SRC-0026**.
+
+### "REAL" is a claim about 38 items, asserted over 140
+
+Every one of block A's 38 carries an administration tag — **38 tags over 18
+named administrations**, June 2023 to June US 2025. Block B carries no tag, no
+watermark and no channel annotation of any kind. Provenance is read from content
+signals and never from a filename (D-1), so S-016 is `recalled_unofficial` /
+OBSERVED and S-017 is `unknown` / UNKNOWN. Registered as **SRC-0025**.
+
+The ingestion script's own scan reported `administration_tag ×36`. The measured
+figure from the decoded text layer is 38 — the scan reads a floor, and says so.
+
+### Two items are defective as printed, and one of them can be proved so
+
+**Block A item 37** gives one angle on a transversal of two parallel lines and
+prints four options. Every angle in that figure is the given angle or its
+supplement; neither is among the four. This was found by reading the figure at
+420 dpi, not by disagreeing with a key — there is no key. It is the first defect
+in the programme established from construction alone. **SRC-0027**.
+
+**Block B item 66** calls the solid a right triangular prism in one sentence and
+a rectangular prism in the next two, which leaves the lateral term's perimeter
+undetermined. Unlike item 37 this one cannot be adjudicated, because there is no
+figure. Coded with `competing_interpretations` load-bearing. **SRC-0028**.
+
+**Block A item 19** names its lines *r, s, t, u, w* in the prose while the figure
+labels them *a, b, c, d, e*, and the letter *d* also names an angle the stem
+gives a value for. Its block B reprint, item 104, carries the same mismatch —
+one defect printed twice, which is itself evidence that 104 is a reprint rather
+than a re-authoring. **SRC-0029**.
+
+### The library predicted most of this file
+
+**Fifty-three of the 69 archetypes used were already in the library**, and
+**118 of the 140 items land on one of them** — the eight `A-LA-*` constructions,
+`A-TRI-*`, `A-SOL-*`, `A-CIRC-*` and `A-TRIG-*`. Sixteen constructions had no
+home and were added: the closed-set enumeration two crossing lines permit
+(`A-LA-CROSSING-SUM`), radian-to-degree conversion as an expression and as a sum,
+the interior angle of a many-sided regular polygon written as a multiple of a half
+turn, a star of five segments, a line cutting a regular polygon, corner offcuts,
+an equilateral tiling, a square in a right angle, a chain of nested similar right
+triangles, a length added to an angle measure, ratio correspondence in a divided
+triangle, a rectangle tiled by square lots, a rectangle sized by a special
+triangle removed from it, a parallelogram centre from coordinates, and a liquid
+poured between two solids.
+
+After thirteen ingestions the library stands at **254 archetypes**, and the ratio
+above is the point: what it fails to predict is now the interesting part.
+
+### The duplicate detector found five defects in my own coding
+
+Not in the file.
+
+1. **A collapsed construction.** Item 29 was grouped with items 1 and 19. It is
+   not their construction — one transversal and one bound, against their three
+   transversals and two named angles. I had run all three through one helper
+   whose signature asserted `several_transversals`.
+2. **`option_testing` on two items with no options.** Items A26 and B101 are
+   student-produced responses; the helper that codes them shares its mechanisms
+   with the multiple-choice form, and carried the options mechanism across. The
+   honest mechanism there is `hidden_step`: the parameter terms cancel out of the
+   stated sum, so the answer comes from matching the constant alone.
+3. **The same helper carried the wrong constraint**, `asked_which_cannot_hold_for_all_values`,
+   which describes the multiple-choice sibling and not these two.
+4. **Two `target_type` values disagreed with their own signature's `asked_role`** —
+   B59 asks for the coefficient of a radical and B66 for an expression, and both
+   were recorded as `value`.
+
+Findings 2–4 came from four mechanical scans run over all 140 records after the
+audit had turned up the first two by hand: target against asked role, options
+mechanism against answer structure, distractors against answer structure both
+ways. All four scans are now clean. **A helper shared between two answer
+structures is the same defect as a second copy of a file: it drifts, and only
+something that looks will notice.**
+
+### The cross-file gap widened again, and is still recorded rather than fixed
+
+`groupDuplicates` placed **zero** cross-file groups for this file. That is not
+because the constructions are unique. Measured against the other 765 records:
+**57 pairs at or above 0.60 similarity, four of them at 0.889**, every one in a
+relation `classifyPair` returns and `groupDuplicates` cannot place —
+`same_construction_different_shape` and `same_archetype_family`. The four highest
+are this file's parallel-proof items against `Q-010-p41-q1` in the triangles bank.
+
+The limitation is the one recorded at the triangles ingestion and it has not
+moved: four of the six relations `classifyPair` computes are consumed by nothing.
+Changing it now would rewrite group ids across 905 records mid-programme, so it
+stays on the deferred list with a second measurement attached.
+
+### What the numbers are
+
+| | before | after |
+|---|---|---|
+| sources | 15 | **17** |
+| questions | 765 | **905** |
+| archetypes | 238 | **254** |
+| conflicts | 34 | **41**, all open |
+| duplicate groups | 117 | **143** |
+| CI checks | 84 | **84**, green |
+
+Fifty-nine of the 140 new records sit in a duplicate group — 42 per cent for the
+file as a whole, which is unremarkable. Split by block it is not: **S-016 is 31
+of 38, or 82 per cent, the highest share of any source in the corpus**, against
+S-017's 27 per cent. Block A is the block that gets reprinted, so nearly every
+item in it has a twin somewhere; block B is where the copies land, diluted among
+eighty-seven items that appear once. The file-level figure averages those two
+facts into neither of them.

@@ -275,6 +275,15 @@ export const OBSERVED_TOPICS = [
   'trigonometry',
   'probability',
   'unit_conversion',
+  // seen in the lines-and-angles corpus, 2026-09-05. The file carries TWO
+  // headings, one per block, and they are not the same word: block A prints
+  // "Lines&Angles" on its first page, block B prints "16 Geometry" on its
+  // first page and nothing on the other twenty-five. Both are recorded,
+  // because a numbered chapter heading is still what the source calls the run
+  // beneath it — and because the second heading is the evidence that block B
+  // is a general geometry pool rather than more lines and angles.
+  'lines_and_angles',
+  'geometry',
 ];
 
 // ── the copyright guard ──────────────────────────────────────────────────────
