@@ -168,8 +168,15 @@ t.ok('every revoke precedes every grant',
 t.section('The list preserves the order the page already shows');
 
 t.ok('the list orders by created_at desc', /order by e\.created_at desc/.test(LIST));
-t.ok('…which is what teacher-exams.html asks the table for today',
-  /\.order\('created_at', \{ ascending: false \}\)/.test(read('teacher-exams.html')));
+/* Until the I-2a page switch this asserted the RPC matched the page's own
+   `.order('created_at', { ascending: false })`. The page no longer orders at
+   all — teacher_exam_list is the sole authority — so the claim becomes: the
+   page delegates, and the RPC still sorts the way the page used to. The
+   delegation is asserted from BOTH sides, because "no .order() call" alone
+   would also be true of a page that had stopped listing exams. */
+t.ok('…and teacher-exams.html delegates that order to the RPC',
+  /sb\.rpc\('teacher_exam_list'/.test(read('teacher-exams.html'))
+  && !/\.order\('created_at'/.test(read('teacher-exams.html')));
 /* H6's homework list puts drafts first. Adopting that here would be a UX
    change inside a read-boundary increment, so it is deliberately not made. */
 t.ok('and it does NOT adopt H6s drafts-first ordering', !/case e\.status when 'draft'/.test(LIST));
